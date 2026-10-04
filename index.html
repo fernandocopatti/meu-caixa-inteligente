@@ -5300,13 +5300,9 @@ function renderDashboard(){
     window.__dashCardSpendHint = (!singleAccount && cardSpend > 0) ? cardSpend : 0;
   }catch(e){ window.__dashCardSpendHint = 0; }
 
-  // Compras no cartão: analítico — não entra em Despesas/Saldo do caixa
-  // Usa o mês mais recente com compra no cartão (pode ser diferente do mês do caixa)
+  // Compras no cartão: mesmo mês da visão geral (curKey) — não pula para parcelas futuras (ex. mar/27)
   try{
-    const cardMonths = Array.from(new Set(
-      scopedTx.filter(t=> isCardAccountName(t.account) && typeById(t.type).countsAsExpense).map(t=>monthKey(t.date))
-    )).sort();
-    const cardKey = (!singleAccount && cardMonths.length) ? cardMonths[cardMonths.length-1] : curKey;
+    const cardKey = curKey;
     const cardMonthTx = scopedTx.filter(t=> monthKey(t.date)===cardKey && typeById(t.type).countsAsExpense);
     const cardBase = cardMonthTx.filter(t=> isCardAccountName(t.account));
     const cardTx = cardBase.filter(isNewCardPurchase);
@@ -11751,7 +11747,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-02-reorg';
+        const CACHE = 'mci-v2026-10-03-cardm';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

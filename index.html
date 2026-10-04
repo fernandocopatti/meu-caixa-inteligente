@@ -3459,6 +3459,54 @@ document.getElementById('trend-cat-select').addEventListener('change', renderDas
 document.getElementById('matrix-account-select').addEventListener('change', renderDashboard);
 document.getElementById('dash-account-filter').addEventListener('change', renderDashboard);
 
+
+function bindDashStatCardClicks(curKey, dashAccount){
+  const month = curKey || '';
+  const single = !!(dashAccount && dashAccount !== '__none__');
+  const wire = (el, opts, title)=>{
+    if(!el) return;
+    el.classList.add('clickable');
+    el.title = title || 'Ver lançamentos';
+    el.setAttribute('role','button');
+    el.onclick = (e)=>{
+      e.preventDefault();
+      goToTransactions(opts);
+    };
+  };
+  const expCard = document.getElementById('stat-month-total') && document.getElementById('stat-month-total').closest('.stat-card');
+  const incCard = document.getElementById('stat-income-total') && document.getElementById('stat-income-total').closest('.stat-card');
+  const balCard = document.getElementById('stat-balance-total') && document.getElementById('stat-balance-total').closest('.stat-card');
+  const topCard = document.getElementById('stat-top-cat') && document.getElementById('stat-top-cat').closest('.stat-card');
+  const cardCard = document.getElementById('stat-card-purchases-wrap');
+  wire(expCard, {
+    month,
+    type: 'despesa',
+    account: single ? dashAccount : '',
+    extra: single ? { expenseOnly: true } : { cashOnly: true, expenseOnly: true }
+  }, 'Ver despesas'+(single?'':' de caixa')+' do mês');
+  wire(incCard, {
+    month,
+    type: 'receita',
+    account: single ? dashAccount : '',
+    extra: single ? { incomeOnly: true } : { cashOnly: true, incomeOnly: true }
+  }, 'Ver receitas'+(single?'':' de caixa')+' do mês');
+  wire(balCard, {
+    month,
+    account: single ? dashAccount : '',
+    extra: single ? null : { cashOnly: true }
+  }, 'Ver lançamentos'+(single?'':' de caixa')+' do mês');
+  wire(topCard, {
+    month,
+    category: window.__dashTopCatId || '',
+    extra: { expenseOnly: true }
+  }, 'Ver lançamentos desta categoria no mês');
+  wire(cardCard, {
+    month,
+    account: single && isCardAccountName(dashAccount) ? dashAccount : '',
+    extra: { cardOnly: true, newPurchasesOnly: true, expenseOnly: true }
+  }, 'Ver compras novas no cartão do mês');
+}
+
 function goToTransactions({month, type, category, source, account, search, from, to} = {}){
   document.getElementById('filter-month').value = month || '';
   document.getElementById('filter-from').value = from || '';
@@ -5387,12 +5435,15 @@ function renderDashboard(){
         const top = catById(rank[0][0]);
         elTop.textContent = top.name;
         elTopVal.textContent = fmtBRL(rank[0][1]);
+        window.__dashTopCatId = rank[0][0];
       } else {
         elTop.textContent = '—';
         elTopVal.textContent = 'Nenhuma despesa ainda';
+        window.__dashTopCatId = '';
       }
     }
   }catch(e){}
+  try{ bindDashStatCardClicks(curKey, dashAccount); }catch(e){ console.warn('bindDashStatCardClicks', e); }
 
   // meta mensal de despesas
   {
@@ -6705,6 +6756,17 @@ function renderTransactions(resetPage){
   const amax = amaxRaw !== '' && amaxRaw != null ? Number(amaxRaw) : null;
   if(amin != null && !isNaN(amin)) list = list.filter(t=> Number(t.amount) >= amin);
   if(amax != null && !isNaN(amax)) list = list.filter(t=> Number(t.amount) <= amax);
+  // Filtro extra vindo dos cards da visão geral (caixa / cartão / compras novas)
+  try{
+    const xf = window.__txExtraFilter;
+    if(xf){
+      if(xf.cashOnly && typeof isCashFlowTx === 'function') list = list.filter(isCashFlowTx);
+      if(xf.cardOnly && typeof isCardAccountName === 'function') list = list.filter(t=> isCardAccountName(t.account));
+      if(xf.newPurchasesOnly && typeof isNewCardPurchase === 'function') list = list.filter(isNewCardPurchase);
+      if(xf.expenseOnly && typeof typeById === 'function') list = list.filter(t=> typeById(t.type).countsAsExpense);
+      if(xf.incomeOnly && typeof typeById === 'function') list = list.filter(t=> typeById(t.type).flowSign > 0);
+    }
+  }catch(e){}
   list.sort((a,b)=> (b.date+b.createdAt).localeCompare(a.date+a.createdAt));
   currentTxList = list;
   selectedIds = new Set(); // limpa seleção ao filtrar
@@ -11747,7 +11809,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-03-cardm';
+        const CACHE = 'mci-v2026-10-04-click';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

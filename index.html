@@ -10203,31 +10203,58 @@ function addMonthsISO(iso, deltaMonths){
 function fixInstallmentDatesInBatch(items){
   if(!items || !items.length) return items;
   const groups = new Map();
+  const amtBucket = (v)=>{
+    // agrupa valores quase iguais (ex. 87,48 e 87,49)
+    const n = Math.round((Number(v)||0) * 100);
+    return String(Math.round(n / 5) * 5); // balde de 5 centavos
+  };
   items.forEach((it, idx)=>{
     if(!it || !it.installment || !it.installment.current || !it.installment.total) return;
     if(Number(it.installment.total) < 2) return;
     const key = [
-      normalizeDesc(it.desc||'').slice(0,48),
-      Number(it.amount).toFixed(2),
+      normalizeDesc(it.desc||'').slice(0,40),
+      amtBucket(it.amount),
       Number(it.installment.total),
-      it.account || ''
+      (it.account || '').toString().trim().toLowerCase()
     ].join('|');
     if(!groups.has(key)) groups.set(key, []);
     groups.get(key).push({ it, idx });
   });
   groups.forEach(list=>{
     if(list.length < 2) return;
-    // datas distintas entre parcelas? já está ok
-    const dates = new Set(list.map(x=> String(x.it.date||'').slice(0,10)));
-    if(dates.size >= list.length) return; // cada uma em data diferente
-    // mesma data (ou quase): usa a menor data do grupo como âncora da parcela 1
     const sorted = list.slice().sort((a,b)=> Number(a.it.installment.current) - Number(b.it.installment.current));
-    const anchor = sorted.map(x=> String(x.it.date||'').slice(0,10)).filter(Boolean).sort()[0];
+    // se já estão em meses distintos e na ordem certa (parcela N em mês >= N-1), não mexe
+    const months = sorted.map(x=> monthKey(x.it.date));
+    let alreadyOk = true;
+    for(let i=1;i<sorted.length;i++){
+      const prev = months[i-1], cur = months[i];
+      if(!prev || !cur || cur <= prev){ alreadyOk = false; break; }
+      // ideal: diferença de meses ~= diferença de número de parcela
+      const dParcel = Number(sorted[i].it.installment.current) - Number(sorted[i-1].it.installment.current);
+      const [y1,m1] = prev.split('-').map(Number);
+      const [y2,m2] = cur.split('-').map(Number);
+      const dMonth = (y2-y1)*12 + (m2-m1);
+      if(dMonth < dParcel){ alreadyOk = false; break; }
+    }
+    if(alreadyOk && new Set(months).size >= sorted.length) return;
+    // Âncora = menor data do grupo, projetada para a parcela 1
+    // (se a menor data for da parcela 3, volta 2 meses)
+    const withDates = sorted.filter(x=> x.it.date);
+    if(!withDates.length) return;
+    let anchor = null;
+    withDates.forEach(x=>{
+      const cur = Number(x.it.installment.current) || 1;
+      const base = addMonthsISO(String(x.it.date).slice(0,10), -(cur - 1));
+      if(!anchor || base < anchor) anchor = base;
+    });
     if(!anchor) return;
     sorted.forEach(x=>{
       const cur = Number(x.it.installment.current) || 1;
-      x.it.date = addMonthsISO(anchor, Math.max(0, cur - 1));
-      x.it._parcelDateFixed = true;
+      const next = addMonthsISO(anchor, Math.max(0, cur - 1));
+      if(String(x.it.date||'').slice(0,10) !== next){
+        x.it.date = next;
+        x.it._parcelDateFixed = true;
+      }
     });
   });
   return items;
@@ -11846,7 +11873,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-04-comp';
+        const CACHE = 'mci-v2026-10-04-parcel2';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

@@ -1192,12 +1192,16 @@
       </div>
 
       <div class="dash-toolbar">
-        <div class="dash-toolbar-row">
-          <div style="flex:1;min-width:120px;">
+        <div class="dash-toolbar-row" style="flex-wrap:wrap;gap:12px 16px;align-items:flex-end;">
+          <div class="field" style="flex:1;min-width:130px;margin:0;">
             <label for="dash-account-filter">Conta / cartão</label>
-            <select id="dash-account-filter" style="width:100%;max-width:180px;margin-top:3px;"><option value="">Todas as contas</option></select>
+            <select id="dash-account-filter" style="width:100%;max-width:200px;margin-top:3px;"><option value="">Todas as contas</option></select>
           </div>
-          <label class="dash-cycle-label" title="Usa dia de fechamento do cartão (não o mês civil)">
+          <div class="field" style="flex:0 0 auto;min-width:120px;margin:0;">
+            <label for="dash-month-select">Competência</label>
+            <select id="dash-month-select" style="width:100%;max-width:150px;margin-top:3px;" title="Mês de competência dos totais e cards"></select>
+          </div>
+          <label class="dash-cycle-label" title="Usa dia de fechamento do cartão (não o mês civil)" style="margin-bottom:4px;">
             <input type="checkbox" id="dash-cycle-mode"> Só ciclo do cartão
           </label>
         </div>
@@ -5276,34 +5280,67 @@ function renderDashboard(){
   const hasData = scopedTx.length > 0;
   const now = new Date();
   const realCurKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  // usa o mês mais recente que realmente tem lançamentos — evita um dashboard "vazio"
-  // quando os dados importados são de um período diferente do mês-calendário atual.
-  const dataMonths = Array.from(new Set(scopedTx.map(t=>monthKey(t.date)))).sort();
-  // Meses com movimento de CAIXA (contas que somam no fluxo)
+  // Todos os meses com lançamento (gráficos podem usar)
+  const dataMonths = Array.from(new Set(scopedTx.map(t=>monthKey(t.date)))).filter(Boolean).sort();
+  // Parcelas futuras (2/N, 3/N…) NÃO podem puxar a visão para mar/27 etc.
+  const countsForMonthPick = (t)=>{
+    const mk = monthKey(t.date);
+    if(!mk) return false;
+    if(t.installment && Number(t.installment.current) > 1 && mk > realCurKey) return false;
+    return true;
+  };
+  const pickMonths = Array.from(new Set(
+    scopedTx.filter(countsForMonthPick).map(t=>monthKey(t.date))
+  )).filter(m=> m && m <= realCurKey).sort();
   const cashDataMonths = Array.from(new Set(
-    scopedTx.filter(t=> typeof isCashFlowTx==='function' ? isCashFlowTx(t) : true).map(t=>monthKey(t.date))
-  )).sort();
+    scopedTx.filter(t=> (typeof isCashFlowTx==='function' ? isCashFlowTx(t) : true) && countsForMonthPick(t)).map(t=>monthKey(t.date))
+  )).filter(m=> m && m <= realCurKey).sort();
   const singleAccView = !!(dashAccount && dashAccount !== '__none__');
-  // "Todas as contas": se o mês mais recente só tem cartão, usa o último mês com caixa
-  // (evita Despesas/Receitas zeradas enquanto o cartão puxa o mês para frente)
+  // Competência: prioriza mês-calendário atual; senão último mês com movimento real (≤ hoje)
   let curKey;
   if(!hasData){
     curKey = realCurKey;
-  } else if(singleAccView){
-    curKey = dataMonths[dataMonths.length-1];
+  } else if(pickMonths.includes(realCurKey)){
+    curKey = realCurKey;
+  } else if(!singleAccView && cashDataMonths.length){
+    curKey = cashDataMonths[cashDataMonths.length-1];
+  } else if(pickMonths.length){
+    curKey = pickMonths[pickMonths.length-1];
   } else {
-    const latestAll = dataMonths[dataMonths.length-1];
-    const latestCash = cashDataMonths.length ? cashDataMonths[cashDataMonths.length-1] : null;
-    if(latestCash && latestCash < latestAll){
-      const cashInLatest = scopedTx.some(t=> monthKey(t.date)===latestAll && isCashFlowTx(t) && (typeById(t.type).countsAsExpense || typeById(t.type).flowSign>0));
-      curKey = cashInLatest ? latestAll : latestCash;
+    // só havia parcelas futuras — fica no mês atual (vazio) em vez de mar/27
+    curKey = realCurKey;
+  }
+  // Filtro de competência (não inclui só parcelas futuras)
+  const monthSel = document.getElementById('dash-month-select');
+  if(monthSel){
+    const opts = (pickMonths.length ? pickMonths : [realCurKey]).slice().reverse();
+    // inclui meses com dados até realCurKey; garante realCurKey na lista
+    if(!opts.includes(realCurKey)) opts.unshift(realCurKey);
+    const prevM = monthSel.value;
+    monthSel.innerHTML = opts.map(m=>{
+      const [y,mo] = String(m).split('-');
+      const label = (['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][parseInt(mo,10)-1]||m)+'/'+String(y).slice(2);
+      return '<option value="'+m+'">'+label+'</option>';
+    }).join('');
+    if(prevM && opts.includes(prevM) && monthSel.dataset.userPicked === '1'){
+      monthSel.value = prevM;
+      curKey = prevM;
     } else {
-      curKey = latestAll;
+      monthSel.value = curKey;
+    }
+    if(!monthSel.dataset.bound){
+      monthSel.dataset.bound = '1';
+      monthSel.addEventListener('change', ()=>{
+        monthSel.dataset.userPicked = '1';
+        renderDashboard();
+      });
     }
   }
-  const curKeyIdx = dataMonths.indexOf(curKey);
-  const prevKey = curKeyIdx > 0 ? dataMonths[curKeyIdx-1] : (cashDataMonths.filter(m=>m<curKey).pop() || (()=>{
-    const [y,m] = curKey.split('-').map(Number);
+  window.__dashRealCurKey = realCurKey;
+  window.__dashCurKey = curKey;
+  const curKeyIdx = pickMonths.indexOf(curKey);
+  const prevKey = curKeyIdx > 0 ? pickMonths[curKeyIdx-1] : (cashDataMonths.filter(m=>m<curKey).pop() || (()=>{
+    const [y,m] = String(curKey).split('-').map(Number);
     const d = new Date(y, m-2, 1);
     return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
   })());
@@ -10688,10 +10725,10 @@ document.getElementById('new-limit-btn').addEventListener('click', ()=>{
 
 document.getElementById('btn-export-report').addEventListener('click', ()=>{
   // usa o mesmo mês em destaque no dashboard
-  const dataMonths = Array.from(new Set(state.transactions.map(t=>monthKey(t.date)))).sort();
-  const now = new Date();
-  const realCurKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  const curKey = dataMonths.length ? dataMonths[dataMonths.length-1] : realCurKey;
+  const curKey = window.__dashCurKey || (function(){
+    const now = new Date();
+    return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  })();
   exportMonthlyReport(curKey);
 });
 
@@ -11809,7 +11846,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-04-click';
+        const CACHE = 'mci-v2026-10-04-comp';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

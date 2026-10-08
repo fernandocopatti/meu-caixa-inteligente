@@ -1301,6 +1301,14 @@
         </div>
       </div>
 
+      <div class="card" style="margin-top:18px;" id="card-purchases-chart-card">
+        <div class="panel-title">Compras no cartão · mês a mês</div>
+        <p style="color:var(--ink-dim);font-size:12.5px;margin:-6px 0 12px;line-height:1.45;">
+          Só <strong>compras novas</strong> (à vista ou 1ª parcela). Parcelas de compras antigas ficam na série cinza — assim dá para ver se o gasto novo está subindo, sem misturar com o que já estava parcelado.
+        </p>
+        <div class="chart-wrap" id="card-purchases-chart-wrap" style="height:220px;"><canvas id="chart-card-purchases"></canvas></div>
+      </div>
+
       <div class="card" style="margin-top:18px;" id="matrix-card">
         <div class="panel-title">
           Gastos por categoria x mês (últimos 6 meses)
@@ -3942,7 +3950,7 @@ document.getElementById('cat-save').addEventListener('click', ()=>{
 /* ============================================================
    DASHBOARD
    ============================================================ */
-let chartTrend=null, chartCats=null, chartCatTrend=null;
+let chartTrend=null, chartCats=null, chartCatTrend=null, chartCardPurchases=null;
 
 function ensureCanvas(wrapId, canvasId){
   const wrap = document.getElementById(wrapId);
@@ -4886,7 +4894,7 @@ function readSplitParts(){
 
 const DEFAULT_DASH_CARDS = {
   goal: true, pace: true, insights: true, budget: true, yoy: true,
-  irPf: true, charts: true, matrix: true, catTrend: true,
+  irPf: true, charts: true, cardPurchasesTrend: true, matrix: true, catTrend: true,
   accountsBalance: true, goals: true, debts: true, cashflow: true,
   merchants: true, agenda: true, compare3: true, subscriptions: true, reduction: true,
   cardLimits: true, invoiceSim: true, installments: true,
@@ -5133,6 +5141,7 @@ function renderDashConfig(){
   const labels = {
     goal:'Meta mensal', pace:'Ritmo do mês', insights:'Insights', budget:'Orçado×realizado',
     yoy:'Ano passado', irPf:'IR / resultado no ano', charts:'Gráficos (6 meses e categorias)',
+    cardPurchasesTrend:'Compras no cartão mês a mês',
     matrix:'Tabela categoria × mês', catTrend:'Evolução por categoria',
     accountsBalance:'Saldos / por conta', goals:'Objetivos', debts:'Dívidas',
     cashflow:'Fluxo projetado', merchants:'Top lojas', agenda:'Agenda', compare3:'Comparativo 3m',
@@ -5906,6 +5915,82 @@ function renderDashboard(){
     }).join('');
   }
 
+  // Compras no cartão mês a mês (compras novas vs parcelas antigas)
+  {
+    const cardChartCard = document.getElementById('card-purchases-chart-card');
+    if(cardChartCard && !dashCardVisible('cardPurchasesTrend')){
+      cardChartCard.style.display = 'none';
+      if(chartCardPurchases){ try{ chartCardPurchases.destroy(); }catch(e){} chartCardPurchases = null; }
+    } else if(cardChartCard){
+      cardChartCard.style.display = '';
+      const cardMonths = months; // mesmos 6 meses do gráfico de tendência
+      const isExp = t => typeById(t.type).countsAsExpense;
+      const cardNewData = cardMonths.map(m=>{
+        return scopedTx.filter(t=>
+          monthKey(t.date)===m && isExp(t) && isCardAccountName(t.account) && isNewCardPurchase(t)
+        ).reduce((s,t)=> s + (Number(t.amount)||0), 0);
+      });
+      const cardOldData = cardMonths.map(m=>{
+        return scopedTx.filter(t=>
+          monthKey(t.date)===m && isExp(t) && isCardAccountName(t.account) && !isNewCardPurchase(t)
+        ).reduce((s,t)=> s + (Number(t.amount)||0), 0);
+      });
+      if(typeof Chart === 'undefined'){
+        const w = document.getElementById('card-purchases-chart-wrap');
+        if(w) w.innerHTML = '<div class="empty-state">Gráfico indisponível (biblioteca não carregou).</div>';
+      } else {
+        const canvas = ensureCanvas('card-purchases-chart-wrap','chart-card-purchases');
+        const ctx = canvas.getContext('2d');
+        if(chartCardPurchases){ try{ chartCardPurchases.destroy(); }catch(e){} chartCardPurchases = null; }
+        chartCardPurchases = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: cardMonths.map(monthLabel),
+            datasets: [
+              {
+                label: 'Compras novas (à vista / 1ª parcela)',
+                data: cardNewData,
+                backgroundColor: '#D97C57',
+                borderRadius: 5,
+                maxBarThickness: 28,
+              },
+              {
+                label: 'Parcelas de compras antigas',
+                data: cardOldData,
+                backgroundColor: 'rgba(169,175,167,0.35)',
+                borderRadius: 5,
+                maxBarThickness: 28,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true, position: 'top', labels: { color: '#A9AFA7', boxWidth: 10, font: { family: 'Inter', size: 11 } } },
+              tooltip: { callbacks: { label: (c)=> c.dataset.label + ': ' + fmtBRL(c.raw) } }
+            },
+            scales: {
+              x: { stacked: true, grid: { display: false }, ticks: { color: '#A9AFA7', font: { family: 'Inter', size: 11 } } },
+              y: { stacked: true, grid: { color: '#242E32' }, ticks: { color: '#A9AFA7', font: { family: 'Inter', size: 10 }, callback: v => 'R$ ' + v } }
+            },
+            onClick: (evt, elements)=>{
+              if(!elements || !elements.length) return;
+              const ix = elements[0].index;
+              const m = cardMonths[ix];
+              if(m && typeof goToTransactions === 'function'){
+                goToTransactions({
+                  month: m,
+                  extra: { cardOnly: true, newPurchasesOnly: elements[0].datasetIndex === 0, expenseOnly: true }
+                });
+              }
+            }
+          }
+        });
+      }
+    }
+  }
+
   // matriz categoria x mês (últimos 6 meses) — só despesas, pra comparar onde pesou mais em cada mês
   {
     const matrixAccSelect = document.getElementById('matrix-account-select');
@@ -6508,6 +6593,7 @@ function renderDashboard(){
     'charts-row':'charts',
     'trend-chart-card':'charts',
     'cats-chart-card':'charts',
+    'card-purchases-chart-card':'cardPurchasesTrend',
     'matrix-card':'matrix',
     'cat-trend-card':'catTrend',
     'account-summary-card':'accountsBalance',
@@ -11874,7 +11960,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-07-gauth';
+        const CACHE = 'mci-v2026-10-08-cardchart';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

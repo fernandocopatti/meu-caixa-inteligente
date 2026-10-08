@@ -2952,7 +2952,25 @@ function normalizeLoadedState(parsed){
   state.categoryRules = parsed.categoryRules || [];
   state.categoryRules.forEach(r=>{ if(r && !r.source) r.source = ruleSourceOf(r); });
   state.recurringTemplates = parsed.recurringTemplates || [];
-  state.settings = { filePrefix: 'livro-caixa', monthlyGoal: null, onboardingDone: false, reductionGoal: null, remindersEnabled: false, cashFlowDays: 30, dashCards: null, hideAmounts: false, hideOnOpen: false, closedUntil: null, subscription: { status: 'free', productId: null, expiresAt: null, lastChecked: null }, ...(parsed.settings || {}) };
+  const incomingSettings = (parsed && parsed.settings && typeof parsed.settings === 'object') ? parsed.settings : {};
+  state.settings = {
+    filePrefix: 'livro-caixa', monthlyGoal: null, onboardingDone: false, reductionGoal: null,
+    remindersEnabled: false, cashFlowDays: 30, dashCards: null, hideAmounts: false, hideOnOpen: false,
+    closedUntil: null, subscription: { status: 'free', productId: null, expiresAt: null, lastChecked: null },
+    ...incomingSettings
+  };
+  // Cards da visão geral: restaura do settings OU de uiPrefs (backup redundante)
+  try{
+    let dc = null;
+    if(incomingSettings.dashCards && typeof incomingSettings.dashCards === 'object'){
+      dc = incomingSettings.dashCards;
+    } else if(parsed && parsed.uiPrefs && parsed.uiPrefs.dashCards && typeof parsed.uiPrefs.dashCards === 'object'){
+      dc = parsed.uiPrefs.dashCards;
+    }
+    if(dc){
+      state.settings.dashCards = Object.assign({}, (typeof DEFAULT_DASH_CARDS !== 'undefined' ? DEFAULT_DASH_CARDS : {}), dc);
+    }
+  }catch(e){ console.warn('dashCards restore', e); }
   // Garante objeto de assinatura mesmo em backups antigos
   if(!state.settings.subscription || typeof state.settings.subscription !== 'object'){
     state.settings.subscription = { status: 'free', productId: null, expiresAt: null, lastChecked: null };
@@ -5158,9 +5176,13 @@ function renderDashConfig(){
     chk.addEventListener('change', ()=>{
       const next = { ...DEFAULT_DASH_CARDS, ...(state.settings.dashCards||{}) };
       next[chk.dataset.dashCard] = chk.checked;
+      if(!state.settings) state.settings = {};
       state.settings.dashCards = next;
-      saveState();
-      renderDashboard();
+      try{ saveState(); }catch(e){}
+      try{ if(typeof persistStateNow === 'function') persistStateNow(); }catch(e){}
+      try{ markGistDirty(); }catch(e){}
+      try{ renderDashboard(); }catch(e){}
+      showToast(chk.checked ? 'Card visível na visão geral.' : 'Card oculto na visão geral.');
     });
   });
 }
@@ -10989,6 +11011,16 @@ function fmtGistWhen(iso){
 function buildBackupObject(){
   const exportedAt = new Date().toISOString();
   setLastLocalExportAt(exportedAt);
+  // snapshot profundo das preferências de cards (evita referência viva / perda no sync)
+  let dashCardsSnap = null;
+  try{
+    if(state.settings && state.settings.dashCards && typeof state.settings.dashCards === 'object'){
+      dashCardsSnap = JSON.parse(JSON.stringify(state.settings.dashCards));
+    }
+  }catch(e){ dashCardsSnap = (state.settings && state.settings.dashCards) || null; }
+  let settingsSnap = state.settings || {};
+  try{ settingsSnap = JSON.parse(JSON.stringify(state.settings || {})); }catch(e){}
+  if(dashCardsSnap) settingsSnap.dashCards = dashCardsSnap;
   return {
     exportedAt,
     app: 'Meu Caixa Inteligente',
@@ -11001,7 +11033,8 @@ function buildBackupObject(){
     categories: state.categories,
     categoryRules: state.categoryRules,
     recurringTemplates: state.recurringTemplates,
-    settings: state.settings,
+    settings: settingsSnap,
+    uiPrefs: { dashCards: dashCardsSnap },
     accountLimits: state.accountLimits,
     accounts: state.accounts,
     goals: state.goals,
@@ -11512,6 +11545,7 @@ function applyImportedBackup(parsed){
   try{ renderCategoriesView(); }catch(e){}
   try{ renderRecurringList(); }catch(e){}
   try{ renderTypesList(); }catch(e){}
+  try{ if(typeof renderDashConfig === 'function') renderDashConfig(); }catch(e){}
   try{ if(typeof goToView === 'function') goToView('transactions'); }catch(e){}
 }
 
@@ -11960,7 +11994,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-08-cardchart';
+        const CACHE = 'mci-v2026-10-08-dashbak';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));
@@ -12968,6 +13002,15 @@ async function renameDriveFile(fileId, newName){
 }
 
 function buildBackupPayload(){
+  // reutiliza o mesmo formato rico do Gist/export JSON
+  try{
+    if(typeof buildBackupObject === 'function'){
+      const full = buildBackupObject();
+      return full;
+    }
+  }catch(e){}
+  let settingsSnap = state.settings || {};
+  try{ settingsSnap = JSON.parse(JSON.stringify(state.settings || {})); }catch(e){}
   return {
     app: 'livro-caixa',
     version: 2,
@@ -12976,7 +13019,8 @@ function buildBackupPayload(){
     categories: state.categories,
     categoryRules: state.categoryRules,
     recurringTemplates: state.recurringTemplates,
-    settings: state.settings,
+    settings: settingsSnap,
+    uiPrefs: { dashCards: (settingsSnap && settingsSnap.dashCards) || null },
     accountLimits: state.accountLimits,
     accounts: state.accounts,
     goals: state.goals,

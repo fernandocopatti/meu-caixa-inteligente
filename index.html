@@ -1351,7 +1351,7 @@
 
       <div class="card" style="margin-top:18px;" id="compare3-card">
         <div class="panel-title">Comparativo 3 meses por categoria</div>
-        <p style="color:var(--ink-dim);font-size:12.5px;margin:-8px 0 14px;">Despesas dos últimos 3 meses com dados — ajuda a ver tendência além do mês atual.</p>
+        <p style="color:var(--ink-dim);font-size:12.5px;margin:-8px 0 14px;">Despesas reais por categoria (últimos 3 meses). Não inclui o bucket “Cartão de crédito” (pagamento da fatura).</p>
         <div class="review-table-scroll"><table class="compare-table" id="compare3-table"></table></div>
       </div>
 
@@ -5238,6 +5238,14 @@ function isCashFlowTx(t){
   if(!t) return false;
   return accountIncludesInCashFlow(t.account);
 }
+/** Categoria genérica de cartão/fatura — não é gasto real por loja (ex.: pagamento da fatura). */
+function isGenericCardCategory(idOrName){
+  try{
+    const c = (typeof catById === 'function') ? catById(idOrName) : null;
+    const n = normalizeDesc((c && c.name) || idOrName || '');
+    return /^(cartao|cartão)/.test(n) || /cartao de credito|cartão de crédito|pagamento fatura|fatura cartao|fatura cartão/.test(n);
+  }catch(e){ return false; }
+}
 
 function renderDashboard(){
  try{
@@ -5488,13 +5496,8 @@ function renderDashboard(){
   // ranking analítico: inclui compras do cartão (por categoria real), não só caixa
   (typeof curDespesasAll !== 'undefined' ? curDespesasAll : curDespesas).forEach(t=>{ byCat[t.category] = (byCat[t.category]||0) + t.amount; });
   // Maior categoria: ignora buckets genéricos de cartão (pagamento de fatura)
-  const isGenericCardCat = (id)=>{
-    const c = catById(id);
-    const n = normalizeDesc((c && c.name) || id || '');
-    return /cartao|cartão|credito|crédito|fatura|pagamento fatura/.test(n);
-  };
   const catEntries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-  const catEntriesTop = catEntries.filter(([id])=> !isGenericCardCat(id));
+  const catEntriesTop = catEntries.filter(([id])=> !isGenericCardCategory(id));
   try{
     const elTop = document.getElementById('stat-top-cat');
     const elTopVal = document.getElementById('stat-top-cat-val');
@@ -6416,7 +6419,14 @@ function renderDashboard(){
       const catSet = new Set();
       const grid = {}; // catId -> month -> amount
       last3.forEach(m=>{
-        scopedTx.filter(t=> monthKey(t.date)===m && typeById(t.type).countsAsExpense).forEach(t=>{
+        scopedTx.filter(t=>{
+          if(monthKey(t.date)!==m) return false;
+          if(!typeById(t.type).countsAsExpense) return false;
+          // não mistura pagamento de fatura / bucket "Cartão de crédito" com gastos reais
+          if(typeof isGenericCardCategory === 'function' && isGenericCardCategory(t.category)) return false;
+          if(t.type === 'pagamento_fatura') return false;
+          return true;
+        }).forEach(t=>{
           catSet.add(t.category);
           if(!grid[t.category]) grid[t.category] = {};
           grid[t.category][m] = (grid[t.category][m]||0) + t.amount;
@@ -11994,7 +12004,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-08-dashbak';
+        const CACHE = 'mci-v2026-10-08-cmp3';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

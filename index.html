@@ -948,6 +948,25 @@
   }
   .onboard-step strong{display:block;color:var(--ink);font-size:13.5px;}
   .onboard-step span{font-size:12px;color:var(--ink-dim);line-height:1.4;}
+  /* Tutorial multi-etapas (primeiro acesso) */
+  #onboard-modal-bg .modal{max-width:440px;padding:22px 20px 18px;}
+  .tut-progress{display:flex;gap:6px;justify-content:center;margin:0 0 16px;}
+  .tut-dot{width:8px;height:8px;border-radius:50%;background:var(--surface-3);border:1px solid var(--line);}
+  .tut-dot.active{background:var(--accent);border-color:var(--accent);}
+  .tut-dot.done{background:var(--accent-dim);border-color:var(--accent-dim);}
+  .tut-slide{display:none;}
+  .tut-slide.active{display:block;}
+  .tut-icon{font-size:28px;text-align:center;margin:0 0 10px;line-height:1;}
+  .tut-slide h3{margin:0 0 10px;font-family:var(--font-display);font-size:20px;text-align:center;color:var(--ink);}
+  .tut-slide p{margin:0 0 8px;color:var(--ink-dim);font-size:13.5px;line-height:1.55;text-align:center;}
+  .tut-slide ul{margin:10px 0 0;padding:0 0 0 18px;color:var(--ink-dim);font-size:13px;line-height:1.5;text-align:left;}
+  .tut-slide ul li{margin-bottom:6px;}
+  .tut-slide ul strong{color:var(--ink);}
+  .tut-actions{display:flex;gap:10px;justify-content:space-between;align-items:center;margin-top:18px;flex-wrap:wrap;}
+  .tut-actions .btn{min-width:110px;}
+  .tut-skip{background:none;border:none;color:var(--ink-faint);font-size:12.5px;cursor:pointer;padding:6px 8px;}
+  .tut-skip:hover{color:var(--ink-dim);}
+  .tut-step-label{font-size:11px;color:var(--ink-faint);text-align:center;margin:0 0 6px;letter-spacing:.4px;text-transform:uppercase;}
   .cat-quick-wrap{position:relative;display:inline-flex;align-items:center;}
   .cat-quick-menu{
     position:absolute;top:100%;left:0;z-index:40;min-width:180px;max-height:220px;overflow:auto;
@@ -2101,6 +2120,7 @@
           </p>
           <div class="btn-row" style="margin-top:0;">
             <button type="button" class="btn" id="export-backup-btn" onclick="exportBackupClick()">Exportar backup (.json)</button>
+            <button type="button" class="btn secondary" id="btn-reopen-tutorial" onclick="reopenTutorial()" style="margin-top:8px;">Ver tutorial do app</button>
             <button type="button" class="btn ghost" id="import-backup-btn" onclick="importBackupClick()">Importar backup</button>
           </div>
           <input type="file" id="import-backup-input" accept=".json" style="display:none;">
@@ -2388,26 +2408,82 @@
 </nav>
 
 <div class="modal-bg" id="onboard-modal-bg">
-  <div class="modal" style="max-width:460px;">
-    <h3>Bem-vindo ao Meu Caixa Inteligente</h3>
-    <p style="color:var(--ink-dim);font-size:13.5px;line-height:1.5;margin:0;">Três passos rápidos para começar a controlar o mês — ou pule e explore com calma.</p>
-    <div class="onboard-steps">
-      <div class="onboard-step" data-onboard="import" onclick="onboardGo('import')">
-        <span class="num">1</span>
-        <div><strong>Importe um extrato</strong><span>OFX do banco ou cartão — em minutos o mês já aparece no dashboard.</span></div>
-      </div>
-      <div class="onboard-step" data-onboard="goal" onclick="onboardGo('goal')">
-        <span class="num">2</span>
-        <div><strong>Defina uma meta mensal</strong><span>Um teto de gastos; o app mostra se você está no ritmo ou acima.</span></div>
-      </div>
-      <div class="onboard-step" data-onboard="limit" onclick="onboardGo('limit')">
-        <span class="num">3</span>
-        <div><strong>Cadastre o limite do cartão</strong><span>Com dia de fechamento, vê quanto da fatura já está comprometido.</span></div>
-      </div>
+  <div class="modal" role="dialog" aria-labelledby="tut-title" aria-modal="true">
+    <p class="tut-step-label" id="tut-step-label">Passo 1 de 6</p>
+    <div class="tut-progress" id="tut-progress" aria-hidden="true"></div>
+
+    <div class="tut-slide active" data-tut="0">
+      <div class="tut-icon">👋</div>
+      <h3 id="tut-title">Bem-vindo ao Meu Caixa Inteligente</h3>
+      <p>Em poucos minutos você organiza banco, cartão e categorias — com visão clara do que sai do caixa e do que é só análise do cartão.</p>
+      <ul>
+        <li><strong>Caixa</strong> = conta corrente, PIX, dinheiro (entra no saldo)</li>
+        <li><strong>Cartão</strong> = compras para analisar por categoria (não duplica no caixa)</li>
+      </ul>
     </div>
-    <div class="btn-row">
-      <button type="button" class="btn" id="onboard-start-import" onclick="onboardGo('import')">Começar importando</button>
-      <button type="button" class="btn ghost" id="onboard-skip" onclick="onboardSkip()">Pular</button>
+
+    <div class="tut-slide" data-tut="1">
+      <div class="tut-icon">⬇️</div>
+      <h3>1. Importar extratos</h3>
+      <p>Traga o mês de uma vez: OFX do banco, CSV/planilha da fatura do cartão ou foto de cupom (OCR).</p>
+      <ul>
+        <li>Menu <strong>Importar</strong></li>
+        <li>Revise possíveis duplicatas antes de confirmar</li>
+        <li>Parcelas são identificadas automaticamente quando o arquivo traz 1/3, 2/3…</li>
+      </ul>
+    </div>
+
+    <div class="tut-slide" data-tut="2">
+      <div class="tut-icon">📊</div>
+      <h3>2. Visão geral</h3>
+      <p>O painel usa os filtros do topo em <strong>todos os cards</strong> (a barra fica fixa ao rolar).</p>
+      <ul>
+        <li><strong>Conta / cartão</strong> — uma conta ou todas</li>
+        <li><strong>Competência</strong> — mês dos totais</li>
+        <li><strong>Despesas/Receitas/Saldo</strong> = fluxo de caixa</li>
+        <li><strong>Compras no cartão</strong> = só compras novas daquele mês</li>
+      </ul>
+    </div>
+
+    <div class="tut-slide" data-tut="3">
+      <div class="tut-icon">📋</div>
+      <h3>3. Lançamentos</h3>
+      <p>Liste, filtre e edite. Toque em um item para abrir os detalhes.</p>
+      <ul>
+        <li>Filtros por período, tipo, conta e categoria</li>
+        <li>Cards da visão abrem a lista já filtrada</li>
+        <li><strong>Reorganizar datas das parcelas</strong> se várias caíram no mesmo dia</li>
+      </ul>
+    </div>
+
+    <div class="tut-slide" data-tut="4">
+      <div class="tut-icon">🏷️</div>
+      <h3>4. Categorias e regras</h3>
+      <p>O app sugere categorias na importação. Você ajusta e cria regras automáticas.</p>
+      <ul>
+        <li>Menu <strong>Categorias</strong></li>
+        <li>Regras por palavras na descrição</li>
+        <li>Reclassificar em lote o que já entrou errado</li>
+      </ul>
+    </div>
+
+    <div class="tut-slide" data-tut="5">
+      <div class="tut-icon">🔐</div>
+      <h3>5. Segurança e backup</h3>
+      <p>Seus dados ficam neste aparelho. Proteja e sincronize quando quiser.</p>
+      <ul>
+        <li><strong>PIN / biometria</strong> na abertura do app</li>
+        <li><strong>Google Drive</strong> ou <strong>GitHub</strong> em Config → backup</li>
+        <li>Exportar arquivo .json a qualquer momento</li>
+      </ul>
+    </div>
+
+    <div class="tut-actions">
+      <button type="button" class="tut-skip" id="tut-skip" onclick="onboardSkip()">Pular tutorial</button>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button type="button" class="btn secondary" id="tut-prev" onclick="tutPrev()" style="display:none;">Voltar</button>
+        <button type="button" class="btn" id="tut-next" onclick="tutNext()">Próximo</button>
+      </div>
     </div>
   </div>
 </div>
@@ -12054,7 +12130,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-14-center';
+        const CACHE = 'mci-v2026-10-20-tut';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));
@@ -12226,15 +12302,58 @@ document.getElementById('report-modal-print').addEventListener('click', ()=>{
   w.document.close();
 });
 
+let tutStep = 0;
+const TUT_TOTAL = 6;
+
+function tutRender(){
+  const slides = document.querySelectorAll('#onboard-modal-bg .tut-slide');
+  const dotsWrap = document.getElementById('tut-progress');
+  const label = document.getElementById('tut-step-label');
+  const prev = document.getElementById('tut-prev');
+  const next = document.getElementById('tut-next');
+  if(!slides.length) return;
+  tutStep = Math.max(0, Math.min(TUT_TOTAL - 1, tutStep));
+  slides.forEach((el, i)=> el.classList.toggle('active', i === tutStep));
+  if(dotsWrap){
+    dotsWrap.innerHTML = Array.from({length: TUT_TOTAL}, (_, i)=>
+      '<span class="tut-dot'+(i===tutStep?' active':(i<tutStep?' done':''))+'"></span>'
+    ).join('');
+  }
+  if(label) label.textContent = 'Passo '+(tutStep+1)+' de '+TUT_TOTAL;
+  if(prev) prev.style.display = tutStep === 0 ? 'none' : '';
+  if(next) next.textContent = tutStep >= TUT_TOTAL - 1 ? 'Começar a usar' : 'Próximo';
+}
+function tutNext(){
+  if(tutStep >= TUT_TOTAL - 1){
+    completeOnboarding();
+    try{
+      if(typeof goToView === 'function') goToView('import');
+      else {
+        const b = document.querySelector('.spine-btn[data-view="import"]') || document.querySelector('.bottom-nav [data-view="import"]');
+        if(b) b.click();
+      }
+      showToast('Dica: comece importando um extrato OFX ou a fatura do cartão.');
+    }catch(e){}
+    return;
+  }
+  tutStep++;
+  tutRender();
+}
+function tutPrev(){
+  if(tutStep > 0){ tutStep--; tutRender(); }
+}
 function maybeShowOnboarding(){
   try{
     if(!state || !state.settings) return;
     if(state.settings.onboardingDone) return;
+    // Já tem dados (veio de backup) — não interrompe
     if((state.transactions||[]).length > 0){
       state.settings.onboardingDone = true;
       try{ saveState(); }catch(e){}
       return;
     }
+    tutStep = 0;
+    tutRender();
     const bg = document.getElementById('onboard-modal-bg');
     if(bg) bg.classList.add('active');
   }catch(e){ console.warn(e); }
@@ -12249,22 +12368,16 @@ function completeOnboarding(){
 }
 function onboardSkip(){
   completeOnboarding();
+  showToast('Tutorial oculto. Você pode reabrir em Configurações.');
 }
 function onboardGo(go){
+  // compat: atalhos antigos
   completeOnboarding();
   try{
     if(go==='import'){
       if(typeof goToView === 'function') goToView('import');
-      else {
-        const b = document.querySelector('.spine-btn[data-view="import"]');
-        if(b) b.click();
-      }
     } else if(go==='goal' || go==='limit'){
       if(typeof goToView === 'function') goToView('config');
-      else {
-        const b = document.querySelector('.spine-btn[data-view="config"]');
-        if(b) b.click();
-      }
       setTimeout(()=>{
         const el = document.getElementById(go==='goal' ? 'monthly-goal-input' : 'limits-section');
         if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
@@ -12272,9 +12385,23 @@ function onboardGo(go){
     }
   }catch(e){ console.warn(e); }
 }
+/** Reabre o tutorial (ex.: pelo botão em Config). */
+function reopenTutorial(){
+  try{
+    if(state && state.settings) state.settings.onboardingDone = false;
+    try{ saveState(); }catch(e){}
+    tutStep = 0;
+    tutRender();
+    const bg = document.getElementById('onboard-modal-bg');
+    if(bg) bg.classList.add('active');
+  }catch(e){ console.warn(e); }
+}
 window.completeOnboarding = completeOnboarding;
 window.onboardSkip = onboardSkip;
 window.onboardGo = onboardGo;
+window.tutNext = tutNext;
+window.tutPrev = tutPrev;
+window.reopenTutorial = reopenTutorial;
 
 function fillReductionConfig(){
   const sel = document.getElementById('reduction-cat-input');

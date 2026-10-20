@@ -879,62 +879,75 @@
 
 
   /* ---------- Itens 1-7 ---------- */
-  /* Barra de filtros da visão: fixa ao rolar — conta/competência valem para todos os cards */
+  /* Barra de filtros compacta e fixa */
   .dash-toolbar{
     position:sticky;
     top:0;
     z-index:35;
     display:block;
-    margin:0 0 16px;
-    padding:10px 14px;
-    background:rgba(18,26,29,.92);
+    margin:0 0 12px;
+    padding:8px 10px;
+    background:rgba(18,26,29,.94);
     border:1px solid var(--line);
-    border-radius:12px;
+    border-radius:10px;
     backdrop-filter:blur(10px);
     -webkit-backdrop-filter:blur(10px);
-    box-shadow:0 8px 24px rgba(0,0,0,.25);
+    box-shadow:0 6px 18px rgba(0,0,0,.22);
   }
   .dash-toolbar label{
-    font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--ink-faint);
-    display:block;margin:0 0 5px;text-align:center;
+    font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-faint);
+    display:block;margin:0 0 3px;text-align:left;
   }
   .dash-toolbar-row{
-    display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;
-    gap:14px 18px;width:100%;
+    display:grid;
+    grid-template-columns:1.4fr 0.9fr auto;
+    gap:8px;
+    align-items:end;
+    width:100%;
   }
-  .dash-toolbar .field{margin:0;min-width:0;text-align:center;}
+  .dash-toolbar .field{margin:0;min-width:0;}
   .dash-toolbar select{
-    min-width:0;width:100%;max-width:none;font-size:13px;padding:8px 12px;height:38px;
+    min-width:0;width:100%;font-size:12.5px;padding:6px 8px;height:34px;
     background:var(--surface-2);border:1px solid var(--line);border-radius:8px;color:var(--ink);
-    text-align:center;text-align-last:center;
   }
-  .dash-toolbar-account{flex:0 1 240px;width:240px;max-width:100%;}
-  .dash-toolbar-month{flex:0 1 140px;width:140px;max-width:100%;}
+  .dash-toolbar-account{min-width:0;}
+  .dash-toolbar-month{min-width:0;}
   .dash-cycle-label{
-    display:inline-flex;align-items:center;justify-content:center;gap:7px;
-    font-size:12.5px;color:var(--ink-dim);cursor:pointer;
-    white-space:nowrap;margin:0 0 1px;padding:8px 14px;border-radius:8px;
-    background:var(--surface-2);border:1px solid var(--line);
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11.5px;color:var(--ink-dim);cursor:pointer;
+    white-space:nowrap;margin:0;padding:7px 10px;border-radius:8px;
+    background:var(--surface-2);border:1px solid var(--line);height:34px;box-sizing:border-box;
   }
-  .dash-cycle-label input{margin:0;accent-color:var(--accent);}
+  .dash-cycle-label input{margin:0;accent-color:var(--accent);flex-shrink:0;}
+  .dash-cycle-label .cycle-short{display:none;}
+  .dash-help{
+    margin-top:6px;border-top:1px solid var(--line);padding-top:4px;
+  }
+  .dash-help > summary{
+    list-style:none;cursor:pointer;text-align:center;
+    font-size:11.5px;color:var(--accent);padding:4px 6px;user-select:none;
+  }
+  .dash-help > summary::-webkit-details-marker{display:none;}
+  .dash-help > summary::after{content:' ▾';font-size:10px;opacity:.8;}
+  .dash-help[open] > summary::after{content:' ▴';}
   .dash-toolbar-hint{
-    margin:12px auto 0;padding-top:10px;border-top:1px solid var(--line);
-    font-size:12px;color:var(--ink-dim);line-height:1.5;
-    text-align:center;max-width:640px;
+    margin:4px auto 2px;padding:0;
+    font-size:11.5px;color:var(--ink-dim);line-height:1.45;
+    text-align:left;max-width:100%;
   }
   .dash-toolbar-hint strong{color:var(--ink);}
   @media (max-width:880px){
-    .dash-toolbar{
-      top:0;
-      margin:0 -2px 12px;
-      border-radius:10px;
-      padding:10px 12px;
+    .dash-toolbar{margin:0 0 10px;padding:7px 8px;border-radius:10px;}
+    .dash-toolbar-row{
+      grid-template-columns:1fr 1fr;
+      gap:6px 8px;
     }
-    .dash-toolbar-row{flex-wrap:wrap;justify-content:center;gap:10px 12px;}
-    .dash-toolbar-account{flex:1 1 100%;width:100%;max-width:320px;}
-    .dash-toolbar-month{flex:1 1 45%;width:auto;max-width:160px;}
-    .dash-cycle-label{flex:1 1 auto;margin:0;padding:8px 12px;}
-    .dash-toolbar-hint{font-size:11px;line-height:1.45;padding-top:8px;margin-top:10px;max-width:100%;}
+    .dash-toolbar-account{grid-column:1 / -1;}
+    .dash-cycle-label{justify-content:center;width:100%;padding:6px 8px;font-size:11px;}
+    .dash-cycle-label .cycle-full{display:none;}
+    .dash-cycle-label .cycle-short{display:inline;}
+    .dash-toolbar select{font-size:12px;height:32px;padding:5px 8px;}
+    .dash-toolbar label{font-size:9px;margin-bottom:2px;}
   }
   .onboard-steps{display:flex;flex-direction:column;gap:10px;margin:12px 0 18px;}
   .onboard-step{
@@ -1265,15 +1278,20 @@
             <label for="dash-month-select">Competência</label>
             <select id="dash-month-select" title="Mês de competência — vale para todos os cards abaixo"></select>
           </div>
-          <label class="dash-cycle-label" title="Usa dia de fechamento do cartão (não o mês civil)">
-            <input type="checkbox" id="dash-cycle-mode"> Só ciclo do cartão
+          <label class="dash-cycle-label" title="Usa o dia de fechamento do cartão em vez do mês civil">
+            <input type="checkbox" id="dash-cycle-mode">
+            <span class="cycle-full">Só ciclo do cartão</span>
+            <span class="cycle-short">Ciclo cartão</span>
           </label>
         </div>
-        <p class="dash-toolbar-hint">
-          Filtros para <strong>todos os cards</strong> abaixo · barra fixa ao rolar.<br>
-          <strong>Todas as contas:</strong> despesas/receitas/saldo = só fluxo de caixa (banco/PIX). Compras no cartão aparecem no card próprio e <em>não</em> somam no caixa (a menos que a conta esteja marcada para isso).<br>
-          <strong>Uma conta/cartão:</strong> totais só daquela conta. <strong>Só ciclo do cartão:</strong> usa o dia de fechamento em vez do mês civil.
-        </p>
+        <details class="dash-help">
+          <summary>Como funcionam os filtros</summary>
+          <div class="dash-toolbar-hint">
+            Valem para <strong>todos os cards</strong> · barra fixa ao rolar.<br>
+            <strong>Todas as contas:</strong> despesas/receitas/saldo = só fluxo de caixa (banco/PIX). Compras no cartão ficam no card próprio e <em>não</em> somam no caixa (salvo se a conta estiver marcada para isso).<br>
+            <strong>Uma conta/cartão:</strong> totais só dela. <strong>Ciclo do cartão:</strong> usa o dia de fechamento, não o mês civil.
+          </div>
+        </details>
       </div>
 
       <div id="alerts-banner-wrap" style="margin-bottom:8px;"></div>
@@ -12130,7 +12148,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-20-tut';
+        const CACHE = 'mci-v2026-10-20-compact';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

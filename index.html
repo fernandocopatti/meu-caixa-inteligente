@@ -1023,6 +1023,75 @@
 
 
 
+
+  /* ---------- Dashboard home (layout estilo produto) ---------- */
+  .dash-home-hero{margin:0 0 14px;}
+  .dash-home-intro{margin:0 0 14px;}
+  .dash-home-intro h1{
+    font-family:var(--font-display);font-size:clamp(22px,4.5vw,28px);font-weight:700;
+    letter-spacing:-.4px;color:var(--ink);margin:0 0 6px;line-height:1.2;
+  }
+  .dash-home-sub{
+    margin:0 0 8px;font-size:13.5px;line-height:1.45;color:var(--ink-dim);max-width:420px;
+  }
+  .dash-home-sub em{font-style:normal;color:var(--accent);font-weight:600;}
+  .dash-home-tag{
+    display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--gold,#C9A227);
+    font-weight:600;margin:0;
+  }
+  .dash-balance-card{
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    padding:16px 16px 14px;margin-bottom:12px;position:relative;overflow:hidden;
+  }
+  .dash-balance-card .bal-label{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    font-size:12.5px;color:var(--ink-dim);margin:0 0 6px;
+  }
+  .dash-balance-card .bal-value{
+    font-family:var(--font-mono);font-size:clamp(26px,7vw,32px);font-weight:700;
+    color:var(--ink);letter-spacing:-.5px;line-height:1.15;margin:0 0 12px;
+  }
+  .dash-balance-io{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+    padding-top:12px;border-top:1px solid var(--line);
+  }
+  .dash-balance-io .io-item{display:flex;flex-direction:column;gap:2px;}
+  .dash-balance-io .io-label{
+    display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-faint);
+  }
+  .dash-balance-io .io-val{
+    font-family:var(--font-mono);font-size:14.5px;font-weight:600;
+  }
+  .dash-balance-io .io-val.in{color:var(--accent);}
+  .dash-balance-io .io-val.out{color:var(--gold,#C9A227);}
+  .dash-quick-grid{
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px;
+  }
+  @media (max-width:480px){
+    .dash-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  .dash-quick-btn{
+    display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:12px 10px;cursor:pointer;text-align:left;color:var(--ink);
+    font-family:var(--font-body);transition:border-color .15s, background .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .dash-quick-btn:active{background:var(--surface-2);}
+  .dash-quick-btn .dq-icon{
+    width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-size:14px;background:var(--surface-2);border:1px solid var(--line);margin-bottom:2px;
+  }
+  .dash-quick-btn .dq-title{font-size:12.5px;font-weight:650;font-family:var(--font-display);letter-spacing:-.2px;}
+  .dash-quick-btn .dq-sub{font-size:10.5px;color:var(--ink-faint);line-height:1.3;}
+  .dash-section-label{
+    font-family:var(--font-display);font-size:14px;font-weight:650;color:var(--ink);
+    margin:4px 0 10px;letter-spacing:-.2px;
+  }
+  @media (max-width:880px){
+    #view-dashboard > .view-head{display:none;}
+  }
+
   /* ---------- Landing (site web) — mesmo visual do app ---------- */
   #landing{
     position:fixed;inset:0;z-index:2100;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -1437,6 +1506,54 @@
     <section class="view active" id="view-dashboard">
       <div class="view-head" style="margin-bottom:10px;">
         <h1 class="view-title">Visão geral</h1>
+      </div>
+
+      <div class="dash-home-hero" id="dash-home-hero">
+        <div class="dash-home-intro">
+          <h1>Visão geral</h1>
+          <p class="dash-home-sub">Acompanhe seu fluxo de caixa e tome <em>decisões</em> mais inteligentes.</p>
+          <p class="dash-home-tag">✦ Seu dinheiro com clareza</p>
+        </div>
+        <div class="dash-balance-card">
+          <div class="bal-label">
+            <span>Saldo disponível</span>
+            <span style="font-size:11px;color:var(--ink-faint);font-family:var(--font-mono);" id="hero-balance-hint">fluxo</span>
+          </div>
+          <div class="bal-value" id="hero-balance-total">R$ 0,00</div>
+          <div class="dash-balance-io">
+            <div class="io-item">
+              <span class="io-label"><span style="color:var(--accent);">↗</span> Entradas</span>
+              <span class="io-val in" id="hero-income-total">R$ 0,00</span>
+            </div>
+            <div class="io-item">
+              <span class="io-label"><span style="color:var(--gold,#C9A227);">↘</span> Saídas</span>
+              <span class="io-val out" id="hero-expense-total">R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+        <div class="dash-quick-grid" role="navigation" aria-label="Atalhos">
+          <button type="button" class="dash-quick-btn" onclick="goToView('new')">
+            <span class="dq-icon">↓</span>
+            <span class="dq-title">Nova entrada</span>
+            <span class="dq-sub">Registrar recebimento</span>
+          </button>
+          <button type="button" class="dash-quick-btn" onclick="goToView('new')">
+            <span class="dq-icon">↑</span>
+            <span class="dq-title">Nova saída</span>
+            <span class="dq-sub">Registrar pagamento</span>
+          </button>
+          <button type="button" class="dash-quick-btn" onclick="try{document.getElementById('insights-card').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}">
+            <span class="dq-icon">◐</span>
+            <span class="dq-title">Relatórios</span>
+            <span class="dq-sub">Análises e insights</span>
+          </button>
+          <button type="button" class="dash-quick-btn" onclick="try{document.getElementById('goal-card').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}">
+            <span class="dq-icon">⚑</span>
+            <span class="dq-title">Metas</span>
+            <span class="dq-sub">Acompanhe objetivos</span>
+          </button>
+        </div>
+        <div class="dash-section-label">Detalhes do período</div>
       </div>
 
       <div class="dash-toolbar" id="dash-sticky-filters" role="search" aria-label="Filtros da visão geral">
@@ -5780,6 +5897,25 @@ function renderDashboard(){
   const balanceEl = document.getElementById('stat-balance-total');
   balanceEl.textContent = (saldo>=0?'':'−') + fmtBRL(Math.abs(saldo));
   balanceEl.className = 'stat-value ' + (saldo>=0 ? 'accent' : 'warn');
+
+  // Hero / layout produto (topo da visão geral)
+  try{
+    const hb = document.getElementById('hero-balance-total');
+    if(hb){
+      hb.textContent = (saldo>=0?'':'−') + fmtBRL(Math.abs(saldo));
+      hb.style.color = saldo>=0 ? 'var(--ink)' : 'var(--warn)';
+    }
+    const hi = document.getElementById('hero-income-total');
+    if(hi) hi.textContent = fmtBRL(curIncomeTotal);
+    const he = document.getElementById('hero-expense-total');
+    if(he) he.textContent = fmtBRL(curTotal);
+    const hh = document.getElementById('hero-balance-hint');
+    if(hh){
+      const cycleOn = !!(document.getElementById('dash-cycle-mode') && document.getElementById('dash-cycle-mode').checked);
+      const acc = (document.getElementById('dash-account-filter')||{}).value || '';
+      hh.textContent = cycleOn ? 'ciclo cartão' : (acc ? 'conta filtrada' : 'fluxo de caixa');
+    }
+  }catch(e){}
 
   if(prevDespesaTotal>0){
     const delta = ((curTotal-prevDespesaTotal)/prevDespesaTotal*100);
@@ -12337,7 +12473,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-28-landing-style';
+        const CACHE = 'mci-v2026-10-28-dashhome';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

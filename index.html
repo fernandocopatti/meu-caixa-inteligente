@@ -1024,69 +1024,100 @@
 
 
 
-  /* ---------- Dashboard home (layout estilo produto) ---------- */
-  .dash-home-hero{margin:0 0 14px;}
+  /* ---------- Dashboard home (layout produto v2) ---------- */
+  .dash-home-hero{margin:0 0 16px;}
   .dash-home-intro{margin:0 0 14px;}
   .dash-home-intro h1{
-    font-family:var(--font-display);font-size:clamp(22px,4.5vw,28px);font-weight:700;
-    letter-spacing:-.4px;color:var(--ink);margin:0 0 6px;line-height:1.2;
+    font-family:var(--font-display);font-size:clamp(24px,5vw,28px);font-weight:700;
+    letter-spacing:-.4px;color:var(--ink);margin:0 0 4px;line-height:1.15;
   }
   .dash-home-sub{
-    margin:0 0 8px;font-size:13.5px;line-height:1.45;color:var(--ink-dim);max-width:420px;
+    margin:0;font-size:12.5px;line-height:1.4;color:var(--ink-faint);
   }
-  .dash-home-sub em{font-style:normal;color:var(--accent);font-weight:600;}
-  .dash-home-tag{
-    display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--gold,#C9A227);
-    font-weight:600;margin:0;
-  }
-  .dash-balance-card{
+  .dash-home-card{
     background:var(--surface);border:1px solid var(--line);border-radius:16px;
-    padding:16px 16px 14px;margin-bottom:12px;position:relative;overflow:hidden;
+    padding:14px 16px;margin-bottom:10px;position:relative;overflow:hidden;
   }
-  .dash-balance-card .bal-label{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    font-size:12.5px;color:var(--ink-dim);margin:0 0 6px;
+  .dash-home-card .hc-top{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;
   }
-  .dash-balance-card .bal-value{
-    font-family:var(--font-mono);font-size:clamp(26px,7vw,32px);font-weight:700;
-    color:var(--ink);letter-spacing:-.5px;line-height:1.15;margin:0 0 12px;
+  .dash-home-card .hc-label{
+    display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-dim);font-weight:500;
   }
-  .dash-balance-io{
-    display:grid;grid-template-columns:1fr 1fr;gap:10px;
-    padding-top:12px;border-top:1px solid var(--line);
+  .dash-home-card .hc-badge{
+    width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:13px;flex-shrink:0;
   }
-  .dash-balance-io .io-item{display:flex;flex-direction:column;gap:2px;}
-  .dash-balance-io .io-label{
-    display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-faint);
+  .dash-home-card .hc-badge.teal{background:rgba(89,179,163,.18);color:var(--accent);}
+  .dash-home-card .hc-badge.gold{background:rgba(201,162,39,.18);color:var(--gold,#C9A227);}
+  .dash-home-card .hc-value{
+    font-family:var(--font-mono);font-size:clamp(26px,7vw,30px);font-weight:700;
+    letter-spacing:-.5px;line-height:1.15;margin:0 0 8px;color:var(--ink);
   }
-  .dash-balance-io .io-val{
-    font-family:var(--font-mono);font-size:14.5px;font-weight:600;
+  .dash-home-card .hc-value.gold{color:var(--gold,#C9A227);}
+  .dash-home-card .hc-delta{
+    font-size:12px;color:var(--ink-faint);display:flex;align-items:center;gap:6px;flex-wrap:wrap;
   }
-  .dash-balance-io .io-val.in{color:var(--accent);}
-  .dash-balance-io .io-val.out{color:var(--gold,#C9A227);}
-  .dash-quick-grid{
-    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px;
+  .dash-home-card .hc-delta .up{color:var(--accent);font-weight:600;}
+  .dash-home-card .hc-delta .down{color:var(--warn);font-weight:600;}
+  .dash-home-card .hc-delta .good{color:var(--accent);font-weight:600;}
+  .dash-home-ring-wrap{
+    position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    width:52px;height:52px;opacity:.95;
   }
-  @media (max-width:480px){
-    .dash-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .dash-home-ring-wrap svg{width:52px;height:52px;transform:rotate(-90deg);}
+  .dash-home-cta{
+    display:flex;align-items:center;gap:12px;width:100%;box-sizing:border-box;
+    background:var(--accent);color:#0a1210;border:none;border-radius:14px;
+    padding:14px 16px;margin:4px 0 14px;cursor:pointer;text-align:left;
+    font-family:var(--font-body);-webkit-tap-highlight-color:transparent;
   }
-  .dash-quick-btn{
-    display:flex;flex-direction:column;align-items:flex-start;gap:4px;
-    background:var(--surface);border:1px solid var(--line);border-radius:14px;
-    padding:12px 10px;cursor:pointer;text-align:left;color:var(--ink);
-    font-family:var(--font-body);transition:border-color .15s, background .15s;
-    -webkit-tap-highlight-color:transparent;
+  .dash-home-cta:active{filter:brightness(.95);}
+  .dash-home-cta .cta-plus{
+    width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.12);
+    display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;flex-shrink:0;
   }
-  .dash-quick-btn:active{background:var(--surface-2);}
-  .dash-quick-btn .dq-icon{
-    width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;
-    font-size:14px;background:var(--surface-2);border:1px solid var(--line);margin-bottom:2px;
+  .dash-home-cta .cta-text{flex:1;min-width:0;}
+  .dash-home-cta .cta-title{font-size:14.5px;font-weight:700;display:block;line-height:1.2;}
+  .dash-home-cta .cta-sub{font-size:11.5px;opacity:.85;display:block;margin-top:2px;}
+  .dash-home-cta .cta-chev{font-size:18px;opacity:.7;flex-shrink:0;}
+  .dash-quick-head{
+    display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;
   }
-  .dash-quick-btn .dq-title{font-size:12.5px;font-weight:650;font-family:var(--font-display);letter-spacing:-.2px;}
-  .dash-quick-btn .dq-sub{font-size:10.5px;color:var(--ink-faint);line-height:1.3;}
+  .dash-quick-head h2{
+    margin:0;font-family:var(--font-display);font-size:15px;font-weight:650;color:var(--ink);letter-spacing:-.2px;
+  }
+  .dash-quick-head button{
+    border:0;background:none;color:var(--accent);font-size:12.5px;font-weight:600;
+    cursor:pointer;font-family:var(--font-body);padding:4px 0;
+  }
+  .dash-quick-row{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 10px;
+    margin-bottom:8px;
+  }
+  .dash-quick-cell{text-align:center;min-width:0;}
+  .dash-quick-cell .qc-icon{
+    width:28px;height:28px;border-radius:50%;margin:0 auto 6px;
+    display:flex;align-items:center;justify-content:center;font-size:13px;
+  }
+  .dash-quick-cell .qc-icon.teal{background:rgba(89,179,163,.18);color:var(--accent);}
+  .dash-quick-cell .qc-icon.gold{background:rgba(201,162,39,.2);color:var(--gold,#C9A227);}
+  .dash-quick-cell .qc-label{font-size:11.5px;color:var(--ink-dim);margin:0 0 4px;}
+  .dash-quick-cell .qc-val{
+    font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink);
+    letter-spacing:-.2px;word-break:break-all;
+  }
+  .dash-quick-cell .qc-val.gold{color:var(--gold,#C9A227);}
+  .dash-quick-cell .qc-val.teal{color:var(--accent);}
+  .dash-quick-cell .qc-meta{font-size:10.5px;color:var(--ink-faint);margin-top:3px;}
+  .dash-home-nudge{
+    font-size:12px;color:var(--gold,#C9A227);font-weight:600;text-align:center;
+    padding:4px 8px 2px;margin:0 0 12px;
+  }
   .dash-section-label{
     font-family:var(--font-display);font-size:14px;font-weight:650;color:var(--ink);
-    margin:4px 0 10px;letter-spacing:-.2px;
+    margin:8px 0 10px;letter-spacing:-.2px;
   }
   @media (max-width:880px){
     #view-dashboard > .view-head{display:none;}
@@ -1511,49 +1542,68 @@
       <div class="dash-home-hero" id="dash-home-hero">
         <div class="dash-home-intro">
           <h1>Visão geral</h1>
-          <p class="dash-home-sub">Acompanhe seu fluxo de caixa e tome <em>decisões</em> mais inteligentes.</p>
-          <p class="dash-home-tag">✦ Seu dinheiro com clareza</p>
+          <p class="dash-home-sub" id="hero-date-sub">Resumo financeiro</p>
         </div>
-        <div class="dash-balance-card">
-          <div class="bal-label">
-            <span>Saldo disponível</span>
-            <span style="font-size:11px;color:var(--ink-faint);font-family:var(--font-mono);" id="hero-balance-hint">fluxo</span>
+
+        <div class="dash-home-card" id="hero-saldo-card">
+          <div class="hc-top">
+            <div class="hc-label"><span class="hc-badge teal">◈</span> Saldo</div>
           </div>
-          <div class="bal-value" id="hero-balance-total">R$ 0,00</div>
-          <div class="dash-balance-io">
-            <div class="io-item">
-              <span class="io-label"><span style="color:var(--accent);">↗</span> Entradas</span>
-              <span class="io-val in" id="hero-income-total">R$ 0,00</span>
-            </div>
-            <div class="io-item">
-              <span class="io-label"><span style="color:var(--gold,#C9A227);">↘</span> Saídas</span>
-              <span class="io-val out" id="hero-expense-total">R$ 0,00</span>
-            </div>
+          <div class="hc-value" id="hero-balance-total">R$ 0,00</div>
+          <div class="hc-delta" id="hero-balance-delta">—</div>
+        </div>
+
+        <div class="dash-home-card" id="hero-expense-card">
+          <div class="hc-top">
+            <div class="hc-label"><span class="hc-badge gold">↓</span> Despesas do mês</div>
+          </div>
+          <div class="hc-value gold" id="hero-expense-total">R$ 0,00</div>
+          <div class="hc-delta" id="hero-expense-delta">—</div>
+          <div class="dash-home-ring-wrap" aria-hidden="true">
+            <svg viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(201,162,39,.2)" stroke-width="3"/>
+              <circle id="hero-expense-ring" cx="18" cy="18" r="15.5" fill="none" stroke="#C9A227" stroke-width="3"
+                stroke-linecap="round" stroke-dasharray="0 100" pathLength="100"/>
+            </svg>
           </div>
         </div>
-        <div class="dash-quick-grid" role="navigation" aria-label="Atalhos">
-          <button type="button" class="dash-quick-btn" onclick="goToView('new')">
-            <span class="dq-icon">↓</span>
-            <span class="dq-title">Nova entrada</span>
-            <span class="dq-sub">Registrar recebimento</span>
-          </button>
-          <button type="button" class="dash-quick-btn" onclick="goToView('new')">
-            <span class="dq-icon">↑</span>
-            <span class="dq-title">Nova saída</span>
-            <span class="dq-sub">Registrar pagamento</span>
-          </button>
-          <button type="button" class="dash-quick-btn" onclick="try{document.getElementById('insights-card').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}">
-            <span class="dq-icon">◐</span>
-            <span class="dq-title">Relatórios</span>
-            <span class="dq-sub">Análises e insights</span>
-          </button>
-          <button type="button" class="dash-quick-btn" onclick="try{document.getElementById('goal-card').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}">
-            <span class="dq-icon">⚑</span>
-            <span class="dq-title">Metas</span>
-            <span class="dq-sub">Acompanhe objetivos</span>
-          </button>
+
+        <button type="button" class="dash-home-cta" onclick="goToView('new')">
+          <span class="cta-plus">+</span>
+          <span class="cta-text">
+            <span class="cta-title">Nova transação</span>
+            <span class="cta-sub">Adicione receita, despesa ou transferência</span>
+          </span>
+          <span class="cta-chev">›</span>
+        </button>
+
+        <div class="dash-quick-head">
+          <h2>Visão rápida</h2>
+          <button type="button" onclick="try{document.getElementById('insights-card').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}">Ver tudo ›</button>
         </div>
-        <div class="dash-section-label">Detalhes do período</div>
+        <div class="dash-quick-row">
+          <div class="dash-quick-cell">
+            <div class="qc-icon teal">↗</div>
+            <div class="qc-label">Entradas</div>
+            <div class="qc-val teal" id="hero-income-total">R$ 0,00</div>
+            <div class="qc-meta" id="hero-income-count">—</div>
+          </div>
+          <div class="dash-quick-cell">
+            <div class="qc-icon gold">↓</div>
+            <div class="qc-label">Despesas</div>
+            <div class="qc-val gold" id="hero-expense-quick">R$ 0,00</div>
+            <div class="qc-meta" id="hero-expense-count">—</div>
+          </div>
+          <div class="dash-quick-cell">
+            <div class="qc-icon teal">◎</div>
+            <div class="qc-label">Economias</div>
+            <div class="qc-val" id="hero-savings-total">R$ 0,00</div>
+            <div class="qc-meta" id="hero-savings-meta">Entradas − despesas</div>
+          </div>
+        </div>
+        <p class="dash-home-nudge" id="hero-nudge">✦ Organize um mês de cada vez</p>
+
+        <div class="dash-section-label">Filtros e detalhes</div>
       </div>
 
       <div class="dash-toolbar" id="dash-sticky-filters" role="search" aria-label="Filtros da visão geral">
@@ -5898,24 +5948,83 @@ function renderDashboard(){
   balanceEl.textContent = (saldo>=0?'':'−') + fmtBRL(Math.abs(saldo));
   balanceEl.className = 'stat-value ' + (saldo>=0 ? 'accent' : 'warn');
 
-  // Hero / layout produto (topo da visão geral)
+  // Hero layout produto v2
   try{
+    const todayLabel = new Date().toLocaleDateString('pt-BR', {day:'numeric', month:'long', year:'numeric'});
+    const sub = document.getElementById('hero-date-sub');
+    if(sub) sub.textContent = 'Resumo financeiro atualizado hoje, ' + todayLabel;
+
     const hb = document.getElementById('hero-balance-total');
     if(hb){
       hb.textContent = (saldo>=0?'':'−') + fmtBRL(Math.abs(saldo));
       hb.style.color = saldo>=0 ? 'var(--ink)' : 'var(--warn)';
     }
-    const hi = document.getElementById('hero-income-total');
-    if(hi) hi.textContent = fmtBRL(curIncomeTotal);
     const he = document.getElementById('hero-expense-total');
     if(he) he.textContent = fmtBRL(curTotal);
-    const hh = document.getElementById('hero-balance-hint');
-    if(hh){
-      const cycleOn = !!(document.getElementById('dash-cycle-mode') && document.getElementById('dash-cycle-mode').checked);
-      const acc = (document.getElementById('dash-account-filter')||{}).value || '';
-      hh.textContent = cycleOn ? 'ciclo cartão' : (acc ? 'conta filtrada' : 'fluxo de caixa');
+    const heq = document.getElementById('hero-expense-quick');
+    if(heq) heq.textContent = fmtBRL(curTotal);
+    const hi = document.getElementById('hero-income-total');
+    if(hi) hi.textContent = fmtBRL(curIncomeTotal);
+
+    const savings = curIncomeTotal - curTotal;
+    const hs = document.getElementById('hero-savings-total');
+    if(hs){
+      hs.textContent = (savings>=0?'':'−') + fmtBRL(Math.abs(savings));
+      hs.style.color = savings>=0 ? 'var(--accent)' : 'var(--warn)';
     }
-  }catch(e){}
+
+    const nInc = curReceitas.length;
+    const nExp = curDespesas.length;
+    const ic = document.getElementById('hero-income-count');
+    if(ic) ic.textContent = nInc + ' lançamento' + (nInc===1?'':'s');
+    const ec = document.getElementById('hero-expense-count');
+    if(ec) ec.textContent = nExp + ' lançamento' + (nExp===1?'':'s');
+
+    // deltas vs mês anterior
+    const bd = document.getElementById('hero-balance-delta');
+    if(bd){
+      const prevSaldo = (prevReceitaTotal||0) - (prevDespesaTotal||0);
+      if(prevDespesaTotal>0 || prevReceitaTotal>0){
+        const base = Math.abs(prevSaldo) < 1 ? 1 : Math.abs(prevSaldo);
+        const d = ((saldo - prevSaldo) / base) * 100;
+        const sign = d>=0 ? '+' : '';
+        bd.innerHTML = (d>=0
+          ? '<span class="up">↑ vs. mês anterior  '+sign+d.toFixed(1).replace('.',',')+'%</span>'
+          : '<span class="down">↓ vs. mês anterior  '+sign+d.toFixed(1).replace('.',',')+'%</span>');
+      } else {
+        bd.textContent = 'Sem base no mês anterior';
+      }
+    }
+    const ed = document.getElementById('hero-expense-delta');
+    if(ed){
+      if(prevDespesaTotal>0){
+        const d = ((curTotal - prevDespesaTotal) / prevDespesaTotal) * 100;
+        const sign = d>=0 ? '+' : '';
+        // menos despesa = bom
+        if(d <= 0) ed.innerHTML = '<span class="good">↓ vs. mês anterior  '+d.toFixed(1).replace('.',',')+'%</span>';
+        else ed.innerHTML = '<span class="down">↑ vs. mês anterior  +'+d.toFixed(1).replace('.',',')+'%</span>';
+      } else ed.textContent = 'Sem base no mês anterior';
+    }
+
+    // anel de despesas vs meta ou vs mês anterior
+    const ring = document.getElementById('hero-expense-ring');
+    if(ring){
+      let pct = 0;
+      const goal = Number((state.settings||{}).monthlyGoal) || 0;
+      if(goal > 0) pct = Math.min(100, (curTotal / goal) * 100);
+      else if(prevDespesaTotal > 0) pct = Math.min(100, (curTotal / prevDespesaTotal) * 100);
+      else pct = curTotal > 0 ? 35 : 0;
+      ring.setAttribute('stroke-dasharray', pct.toFixed(1) + ' 100');
+    }
+
+    const nudge = document.getElementById('hero-nudge');
+    if(nudge){
+      if(prevDespesaTotal>0 && curTotal < prevDespesaTotal) nudge.textContent = '✦ Você está no caminho certo!';
+      else if(savings >= 0 && curIncomeTotal > 0) nudge.textContent = '✦ Mês com sobra no fluxo de caixa';
+      else if(curTotal === 0 && curIncomeTotal === 0) nudge.textContent = '✦ Importe um extrato ou registre o primeiro lançamento';
+      else nudge.textContent = '✦ Organize um mês de cada vez';
+    }
+  }catch(e){ console.warn('hero', e); }
 
   if(prevDespesaTotal>0){
     const delta = ((curTotal-prevDespesaTotal)/prevDespesaTotal*100);
@@ -12473,7 +12582,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-28-dashhome';
+        const CACHE = 'mci-v2026-10-29-homev2';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

@@ -1261,6 +1261,14 @@
   <main>
 
     <div class="sync-bar" id="sync-bar"></div>
+    <div id="drive-auto-banner" style="display:none;margin:0 0 12px;padding:12px 14px;border-radius:10px;border:1px solid var(--accent-dim);background:rgba(89,179,163,.1);">
+      <div style="font-size:13.5px;color:var(--ink);font-weight:600;margin:0 0 4px;">Backup automático no Google Drive</div>
+      <div style="font-size:12.5px;color:var(--ink-dim);line-height:1.45;margin:0 0 10px;">Com a conta Google você pode sincronizar ao entrar e ao sair — sem apertar Salvar toda vez. O arquivo fica no seu Drive.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <button type="button" class="btn" onclick="enableDriveAutoClick()" style="padding:8px 14px;">Ativar sync Drive</button>
+        <button type="button" class="btn ghost" onclick="dismissDriveAutoBanner()" style="padding:8px 14px;">Agora não</button>
+      </div>
+    </div>
 
     <!-- ===================== DASHBOARD ===================== -->
     <section class="view active" id="view-dashboard">
@@ -1945,8 +1953,13 @@
               <button type="button" class="btn secondary" id="cfg-save-google-client" data-action="save-google-client" onclick="saveGoogleClientClick()" style="padding:8px 14px;">Salvar Client ID</button>
             </div>
             <div id="drive-status" style="font-size:12px;color:var(--ink-faint);margin-bottom:10px;">Drive não conectado.</div>
+            <label style="display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--ink-dim);margin:0 0 10px;cursor:pointer;line-height:1.4;">
+              <input type="checkbox" id="drive-auto-sync" style="margin-top:2px;">
+              <span><strong style="color:var(--ink);">Sincronização automática</strong> — ao entrar tenta baixar se o Drive estiver mais novo; ao salvar e ao sair envia o backup (precisa ter conectado o Drive nesta sessão).</span>
+            </label>
             <div class="btn-row" style="margin-top:0;flex-wrap:wrap;gap:8px;">
               <button type="button" class="btn" id="btn-drive-connect" onclick="driveConnectClick()" style="padding:8px 14px;">Conectar Drive</button>
+              <button type="button" class="btn secondary" id="btn-drive-sync-now" onclick="driveSyncNowClick()" style="padding:8px 14px;">Sincronizar agora</button>
               <button type="button" class="btn secondary" id="btn-drive-upload" onclick="driveUploadClick()" style="padding:8px 14px;">Salvar no Drive</button>
               <button type="button" class="btn secondary" id="btn-drive-download" onclick="driveDownloadClick()" style="padding:8px 14px;">Restaurar do Drive</button>
             </div>
@@ -3224,6 +3237,7 @@ function persistStateNow(){
 
 function saveState(){
   try{ markGistDirty(); }catch(e){}
+  try{ markDriveDirty(); }catch(e){}
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async ()=>{
     STORAGE_KEY = activeStorageKey();
@@ -11282,13 +11296,17 @@ function explainGistFetchError(err){
     return hint;
   }
   if(/401|Bad credentials|Requires authentication/i.test(msg)){
-    return 'Token inválido ou expirado. Gere outro Personal Access Token com permissão gist.';
+    return 'Token inválido ou expirado. Gere outro Personal Access Token (classic) com a caixa gist marcada.';
   }
   if(/403|rate limit|Forbidden/i.test(msg)){
-    return 'GitHub recusou (403). Token sem permissão gist, ou limite de uso da API.';
+    return 'GitHub recusou (403). Token sem permissão gist, ou limite de uso da API. Regenere o token classic com scope gist.';
   }
   if(/404|Not Found/i.test(msg)){
     return 'Gist não encontrado (404). Confira o Gist ID ou se o token é da mesma conta que criou o Gist.';
+  }
+  // Mensagem oficial da API ao tentar PATCH sem direito de escrita
+  if(/cannot be updated|Gist cannot be updated/i.test(msg)){
+    return 'GitHub não deixou atualizar este Gist. Causas comuns: (1) token sem permissão de escrita em gist; (2) Gist ID de outra conta; (3) token fine-grained sem "Gists: Read and write". Solução: use token classic com scope gist da mesma conta do Gist, ou apague o Gist ID no app e envie de novo para criar um Gist novo.';
   }
   return msg;
 }
@@ -11507,13 +11525,21 @@ async function uploadBackupToGist(){
         [GIST_MANIFEST]: { content: JSON.stringify(manifest, null, 2) }
       });
     }catch(e){ console.warn('manifest merge', e); }
-    await gistApi('/gists/'+encodeURIComponent(gistId), {
-      method: 'PATCH',
-      body: JSON.stringify({
-        description: 'Livro-Caixa multi-aparelho · '+ (backup.deviceName||'') +' · '+new Date().toISOString().slice(0,10),
-        files
-      })
-    });
+    try{
+      await gistApi('/gists/'+encodeURIComponent(gistId), {
+        method: 'PATCH',
+        body: JSON.stringify({
+          description: 'Livro-Caixa multi-aparelho · '+ (backup.deviceName||'') +' · '+new Date().toISOString().slice(0,10),
+          files
+        })
+      });
+    }catch(patchErr){
+      const pm = String((patchErr && patchErr.message) || patchErr || '');
+      if(/cannot be updated/i.test(pm)){
+        updateGistStatus('Erro: sem permissão para atualizar este Gist. Confira token (scope gist) e se o Gist ID é da mesma conta. Ou limpe o Gist ID e envie de novo para criar outro.');
+      }
+      throw patchErr;
+    }
     updateGistStatus('Backup atualizado · '+ (backup.deviceName||'aparelho') +' · '+backup.transactions.length+' lanç. · Gist '+gistId.slice(0,12)+'…');
     gistDirty = false; lastGistSyncAt = Date.now();
     showToast('Backup enviado ('+(backup.deviceName||'aparelho')+').');
@@ -12148,7 +12174,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-20-compact';
+        const CACHE = 'mci-v2026-10-28-driveauto';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));
@@ -12595,6 +12621,8 @@ async function enterAppAs(user){
     try{ maybeShowOnboarding(); }catch(e){}
     setTimeout(()=>{ try{ checkReminders(); }catch(e){} }, 600);
     setTimeout(()=>{ try{ touchVisitSnapshot(); }catch(e){} }, 2500);
+    setTimeout(()=>{ try{ showDriveAutoBannerIfNeeded(); }catch(e){} }, 400);
+    setTimeout(()=>{ try{ tryDrivePullOnEnter(); }catch(e){} }, 900);
     showToast(user.provider==='google' ? ('Olá, '+(user.name||'bem-vindo')+'!') : 'Modo local ativo.');
   }catch(err){
     console.error('enterAppAs', err);
@@ -13077,6 +13105,33 @@ var DRIVE_TOKEN_KEY = 'lc-drive-token';
 var DRIVE_FILE_ID_KEY = 'lc-drive-file-id';
 var driveAccessToken = null;
 var driveTokenClient = null;
+var driveDirty = false;
+var driveSyncInFlight = false;
+var lastDriveSyncAt = 0;
+var DRIVE_AUTO_KEY = 'lc-drive-auto-sync';
+var DRIVE_BANNER_DISMISS_KEY = 'lc-drive-banner-dismiss';
+var drivePushTimer = null;
+
+function isDriveAutoEnabled(){
+  try{ return localStorage.getItem(DRIVE_AUTO_KEY) === '1'; }catch(e){ return false; }
+}
+function setDriveAutoEnabled(on){
+  try{
+    if(on) localStorage.setItem(DRIVE_AUTO_KEY, '1');
+    else localStorage.removeItem(DRIVE_AUTO_KEY);
+  }catch(e){}
+  const chk = document.getElementById('drive-auto-sync');
+  if(chk) chk.checked = !!on;
+}
+function markDriveDirty(){
+  driveDirty = true;
+  try{
+    if(isDriveAutoEnabled() && (driveAccessToken || (typeof loadDriveToken==='function' && loadDriveToken()))){
+      clearTimeout(drivePushTimer);
+      drivePushTimer = setTimeout(function(){ try{ tryDrivePush('debounce'); }catch(e){} }, 45000);
+    }
+  }catch(e){}
+}
 
 function setDriveStatus(msg){
   const el = document.getElementById('drive-status');
@@ -13315,6 +13370,165 @@ async function downloadBackupFromDrive(){
 }
 
 
+
+function dismissDriveAutoBanner(){
+  try{ localStorage.setItem(DRIVE_BANNER_DISMISS_KEY, '1'); }catch(e){}
+  const b = document.getElementById('drive-auto-banner');
+  if(b) b.style.display = 'none';
+}
+function showDriveAutoBannerIfNeeded(){
+  try{
+    const b = document.getElementById('drive-auto-banner');
+    if(!b) return;
+    const isGoogle = currentUser && currentUser.provider === 'google';
+    const dismissed = localStorage.getItem(DRIVE_BANNER_DISMISS_KEY) === '1';
+    if(isGoogle && !isDriveAutoEnabled() && !dismissed) b.style.display = 'block';
+    else b.style.display = 'none';
+  }catch(e){}
+}
+async function enableDriveAutoClick(){
+  try{
+    if(typeof requirePro === 'function' && !requirePro('Backup no Google Drive')) return;
+    setDriveStatus('Ativando sincronização automática…');
+    await requestDriveAccess();
+    setDriveAutoEnabled(true);
+    try{ localStorage.removeItem(DRIVE_BANNER_DISMISS_KEY); }catch(e){}
+    const b = document.getElementById('drive-auto-banner');
+    if(b) b.style.display = 'none';
+    try{ await uploadBackupToDrive(); driveDirty = false; lastDriveSyncAt = Date.now(); }catch(e){ console.warn(e); }
+    setDriveStatus('Sync automática ativa · backup enviado · '+new Date().toLocaleString('pt-BR'));
+    showToast('Sincronização automática com o Drive ativada.');
+  }catch(e){
+    console.error(e);
+    setDriveStatus('Falha: '+(e.message||e));
+    alert('Drive: '+(e.message||e)+'\n\nVerifique Client ID Web, Drive API e origem HTTPS no Google Cloud.');
+  }
+}
+async function tryDrivePush(reason){
+  if(!isDriveAutoEnabled()) return false;
+  if(!driveDirty && reason !== 'manual' && reason !== 'enable') return false;
+  const token = driveAccessToken || loadDriveToken();
+  if(!token){
+    if(reason === 'manual') throw new Error('Conecte o Drive nesta sessão (o token expira ao fechar a aba).');
+    return false;
+  }
+  if(driveSyncInFlight) return false;
+  const now = Date.now();
+  if(reason !== 'manual' && reason !== 'enable' && now - lastDriveSyncAt < 12000) return false;
+  driveSyncInFlight = true;
+  driveAccessToken = token;
+  try{
+    await uploadBackupToDrive();
+    driveDirty = false;
+    lastDriveSyncAt = Date.now();
+    return true;
+  }catch(err){
+    console.warn('tryDrivePush', reason, err);
+    try{ setDriveStatus('Falha no envio auto: '+(err.message||err)); }catch(e){}
+    if(reason === 'manual') throw err;
+    return false;
+  }finally{
+    driveSyncInFlight = false;
+  }
+}
+async function tryDrivePullOnEnter(){
+  if(!isDriveAutoEnabled()) return;
+  const token = driveAccessToken || loadDriveToken();
+  if(!token){
+    try{ setDriveStatus('Sync auto ligada · reconecte o Drive nesta sessão para puxar/enviar.'); }catch(e){}
+    return;
+  }
+  driveAccessToken = token;
+  try{
+    setDriveStatus('Verificando backup no Drive…');
+    const file = await findDriveBackupFile();
+    if(!file || !file.id){
+      setDriveStatus('Sync auto · nenhum arquivo no Drive ainda (será criado ao salvar).');
+      return;
+    }
+    const res = await driveFetch('/files/'+encodeURIComponent(file.id)+'?alt=media');
+    if(!res.ok) throw new Error('Falha ao ler backup do Drive');
+    const parsed = await res.json();
+    if(!parsed || !Array.isArray(parsed.transactions)) throw new Error('Backup do Drive inválido');
+    const cloudAt = parsed.exportedAt || file.modifiedTime || '';
+    let localExport = '';
+    try{ localExport = localStorage.getItem('lc-last-local-export') || ''; }catch(e){}
+    const localCount = (state.transactions||[]).length;
+    const cloudCount = parsed.transactions.length;
+    const cloudNewer = cloudAt && (!localExport || String(cloudAt) > String(localExport));
+    const localEmpty = localCount === 0 && cloudCount > 0;
+
+    if(localEmpty){
+      if(typeof applyImportedBackup === 'function') applyImportedBackup(parsed);
+      driveDirty = false;
+      setDriveStatus('Restaurado do Drive (aparelho sem dados) · '+cloudCount+' lanç.');
+      showToast('Dados restaurados do Google Drive.');
+      return;
+    }
+    if(cloudNewer && cloudCount !== localCount){
+      const msg = 'O Drive tem um backup mais recente ('+cloudCount+' lanç., '+String(cloudAt).slice(0,19).replace('T',' ')+'). Local tem '+localCount+' lanç. Restaurar do Drive?';
+      const doRestore = ()=>{
+        try{
+          if(typeof applyImportedBackup === 'function') applyImportedBackup(parsed);
+          driveDirty = false;
+          setDriveStatus('Restaurado do Drive · '+cloudCount+' lanç.');
+          showToast('Backup do Drive restaurado.');
+        }catch(e){ alert(e.message||e); }
+      };
+      if(typeof askConfirm === 'function') askConfirm('Backup no Drive mais novo', msg, doRestore);
+      else if(confirm(msg)) doRestore();
+      else setDriveStatus('Drive mais novo disponível · dados locais mantidos.');
+      return;
+    }
+    setDriveStatus('Sync auto · local em dia · '+new Date().toLocaleString('pt-BR'));
+  }catch(err){
+    console.warn('tryDrivePullOnEnter', err);
+    try{ setDriveStatus('Sync auto · falha ao verificar: '+(err.message||err)); }catch(e){}
+  }
+}
+async function tryDriveSyncOnExit(reason){
+  if(!isDriveAutoEnabled()) return;
+  if(!driveDirty && reason !== 'manual') return;
+  const token = driveAccessToken || loadDriveToken();
+  if(!token) return;
+  if(driveSyncInFlight) return;
+  driveAccessToken = token;
+  driveSyncInFlight = true;
+  try{
+    await uploadBackupToDrive();
+    driveDirty = false;
+    lastDriveSyncAt = Date.now();
+    try{ setDriveStatus('Enviado ao sair · '+new Date().toLocaleTimeString('pt-BR')); }catch(e){}
+  }catch(err){
+    console.warn('tryDriveSyncOnExit', err);
+  }finally{
+    driveSyncInFlight = false;
+  }
+}
+function setupDriveSyncOnExit(){
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'hidden'){
+      try{ tryDriveSyncOnExit('hidden'); }catch(e){}
+    }
+  });
+  window.addEventListener('pagehide', ()=>{ try{ tryDriveSyncOnExit('pagehide'); }catch(e){} });
+}
+async function driveSyncNowClick(){
+  try{
+    if(typeof requirePro === 'function' && !requirePro('Backup no Google Drive')) return;
+    setDriveStatus('Sincronizando…');
+    await requestDriveAccess();
+    driveDirty = true;
+    await tryDrivePush('manual');
+    await tryDrivePullOnEnter();
+    showToast('Sincronização com o Drive concluída.');
+  }catch(e){
+    console.error(e);
+    setDriveStatus('Falha: '+(e.message||e));
+    alert('Erro ao sincronizar: '+(e.message||e));
+  }
+}
+
 async function driveConnectClick(){
   try{
     if(typeof requirePro === 'function' && !requirePro('Backup no Google Drive')) return;
@@ -13324,7 +13538,9 @@ async function driveConnectClick(){
     setDriveStatus(file
       ? ('Conectado · backup encontrado (atualizado '+new Date(file.modifiedTime).toLocaleString('pt-BR')+')')
       : 'Conectado · nenhum backup ainda (use Salvar no Drive)');
-    showToast('Google Drive conectado.');
+    setDriveAutoEnabled(true);
+    showToast('Google Drive conectado · sync automática ligada.');
+    try{ await tryDrivePullOnEnter(); }catch(e2){ console.warn(e2); }
   }catch(e){
     console.error(e);
     setDriveStatus('Falha: '+(e.message||e));
@@ -13368,11 +13584,26 @@ function driveDownloadClick(){
 window.driveConnectClick = driveConnectClick;
 window.driveUploadClick = driveUploadClick;
 window.driveDownloadClick = driveDownloadClick;
+window.driveSyncNowClick = driveSyncNowClick;
+window.enableDriveAutoClick = enableDriveAutoClick;
+window.dismissDriveAutoBanner = dismissDriveAutoBanner;
 
 function initDriveUI(){
   const connectBtn = document.getElementById('btn-drive-connect');
   const upBtn = document.getElementById('btn-drive-upload');
   const downBtn = document.getElementById('btn-drive-download');
+  const autoChk = document.getElementById('drive-auto-sync');
+  if(autoChk){
+    autoChk.checked = isDriveAutoEnabled();
+    autoChk.addEventListener('change', ()=>{
+      setDriveAutoEnabled(!!autoChk.checked);
+      if(autoChk.checked){
+        showToast('Sync automática ligada. Conecte o Drive se ainda não conectou nesta sessão.');
+      } else {
+        showToast('Sync automática desligada.');
+      }
+    });
+  }
   if(!connectBtn) return;
 
   connectBtn.addEventListener('click', async ()=>{

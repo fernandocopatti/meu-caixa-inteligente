@@ -1023,54 +1023,90 @@
 
 
 
-  /* ---------- Landing (site web) ---------- */
+  /* ---------- Landing (site web) — mesmo visual do app ---------- */
   #landing{
     position:fixed;inset:0;z-index:2100;overflow-y:auto;-webkit-overflow-scrolling:touch;
     background:var(--bg);display:none;
+    font-family:var(--font-body);
+    color:var(--ink);
   }
   #landing.visible{display:block;}
-  .landing-inner{max-width:920px;margin:0 auto;padding:28px 20px 48px;box-sizing:border-box;}
+  .landing-inner{max-width:880px;margin:0 auto;padding:20px 16px 40px;box-sizing:border-box;}
   .landing-nav{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:28px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-bottom:22px;padding-bottom:14px;border-bottom:1px solid var(--line);
   }
   .landing-nav .brand-mark{display:flex;align-items:center;gap:10px;}
+  .landing-nav .brand-logo{width:40px;height:40px;border-radius:11px;flex-shrink:0;}
   .landing-nav .brand-name{
-    font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--ink);letter-spacing:-.2px;
+    font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--ink);
+    letter-spacing:-.3px;line-height:1.2;
   }
-  .landing-nav .brand-domain{font-size:11px;color:var(--ink-faint);margin-top:1px;}
-  .landing-hero{text-align:left;margin-bottom:28px;}
+  .landing-nav .brand-domain{
+    font-family:var(--font-mono);font-size:10.5px;color:var(--ink-faint);margin-top:2px;letter-spacing:.2px;
+  }
+  .landing-hero{
+    text-align:left;margin-bottom:20px;
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 16px;
+  }
   .landing-hero h1{
-    font-family:var(--font-display);font-size:clamp(26px,5vw,36px);line-height:1.15;
-    color:var(--ink);margin:0 0 12px;letter-spacing:-.4px;font-weight:700;
+    font-family:var(--font-display);font-size:clamp(22px,5.2vw,30px);line-height:1.2;
+    color:var(--ink);margin:0 0 10px;letter-spacing:-.35px;font-weight:700;
   }
-  .landing-hero h1 span{color:#C9A227;}
+  .landing-hero h1 span{color:var(--gold, #C9A227);}
   .landing-hero .lead{
-    font-size:15.5px;line-height:1.55;color:var(--ink-dim);margin:0 0 20px;max-width:540px;
+    font-family:var(--font-body);font-size:14px;line-height:1.55;color:var(--ink-dim);
+    margin:0 0 16px;max-width:520px;font-weight:400;
   }
-  .landing-cta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
-  .landing-cta .btn{padding:12px 18px;font-size:14px;}
-  .landing-note{font-size:12px;color:var(--ink-faint);margin-top:10px;line-height:1.4;}
+  .landing-cta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px;}
+  .landing-cta .btn{
+    padding:11px 16px;font-size:13.5px;font-weight:600;
+    font-family:var(--font-body);border-radius:10px;
+  }
+  .landing-note{
+    font-size:11.5px;color:var(--ink-faint);margin:12px 0 0;line-height:1.45;
+    font-family:var(--font-body);
+  }
   .landing-grid{
-    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:28px 0;
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 14px;
   }
   @media (max-width:620px){ .landing-grid{grid-template-columns:1fr;} }
   .landing-card{
-    background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 14px;
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px;
   }
-  .landing-card .ic{font-size:20px;margin-bottom:6px;line-height:1;}
-  .landing-card h3{margin:0 0 6px;font-size:14.5px;color:var(--ink);font-weight:650;}
-  .landing-card p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-dim);}
+  .landing-card .ic{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:32px;height:32px;border-radius:9px;margin-bottom:8px;
+    background:var(--surface-2);border:1px solid var(--line);
+    font-size:15px;line-height:1;
+  }
+  .landing-card h3{
+    margin:0 0 6px;font-family:var(--font-display);font-size:14px;color:var(--ink);
+    font-weight:650;letter-spacing:-.2px;
+  }
+  .landing-card p{
+    margin:0;font-family:var(--font-body);font-size:12.5px;line-height:1.45;color:var(--ink-dim);
+  }
   .landing-steps{
-    background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 16px;margin-bottom:24px;
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:16px 14px;margin-bottom:16px;
   }
-  .landing-steps h2{margin:0 0 12px;font-size:15px;color:var(--ink);}
-  .landing-steps ol{margin:0;padding-left:18px;color:var(--ink-dim);font-size:13.5px;line-height:1.55;}
+  .landing-steps h2{
+    margin:0 0 12px;font-family:var(--font-display);font-size:15px;font-weight:650;
+    color:var(--ink);letter-spacing:-.2px;
+  }
+  .landing-steps ol{
+    margin:0;padding-left:18px;color:var(--ink-dim);
+    font-family:var(--font-body);font-size:13px;line-height:1.55;
+  }
   .landing-steps li{margin-bottom:8px;}
-  .landing-steps li strong{color:var(--ink);}
+  .landing-steps li strong{color:var(--ink);font-weight:600;}
   .landing-foot{
-    border-top:1px solid var(--line);padding-top:16px;font-size:12px;color:var(--ink-faint);line-height:1.5;
+    border-top:1px solid var(--line);padding-top:14px;
+    font-family:var(--font-body);font-size:11.5px;color:var(--ink-faint);line-height:1.5;
   }
   .landing-foot a{color:var(--accent);}
+  .landing-foot strong{color:var(--ink-dim);font-weight:600;}
 
   /* ---------- Login ---------- */
   #auth-gate{
@@ -12301,7 +12337,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-28-jakarta';
+        const CACHE = 'mci-v2026-10-28-landing-style';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));

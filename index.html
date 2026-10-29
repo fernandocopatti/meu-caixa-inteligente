@@ -2292,7 +2292,12 @@
               <button type="button" class="btn secondary" id="btn-drive-sync-now" onclick="driveSyncNowClick()" style="padding:8px 14px;">Sincronizar agora</button>
               <button type="button" class="btn secondary" id="btn-drive-upload" onclick="driveUploadClick()" style="padding:8px 14px;">Salvar no Drive</button>
               <button type="button" class="btn secondary" id="btn-drive-download" onclick="driveDownloadClick()" style="padding:8px 14px;">Restaurar do Drive</button>
+              <button type="button" class="btn secondary" id="btn-drive-list" onclick="driveListBackupsClick()" style="padding:8px 14px;">Ver backups</button>
             </div>
+            <div id="drive-files-list" style="margin-top:12px;display:none;"></div>
+            <p style="font-size:11.5px;color:var(--ink-faint);margin:10px 0 0;line-height:1.45;">
+              Cada aparelho salva um arquivo com o nome do dispositivo (ex.: <strong>Meu-Caixa-Inteligente-iPhone.json</strong>). Em <strong>Restaurar</strong> ou <strong>Ver backups</strong> você escolhe qual trazer.
+            </p>
             <p style="font-size:11.5px;color:var(--ink-faint);margin:10px 0 0;line-height:1.45;">
               Em <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener" style="color:var(--accent);">Google Cloud Console</a>:
               Client ID tipo Web, ative a <strong>Drive API</strong> e autorize a origem
@@ -12582,7 +12587,7 @@ function registerPWA(){
 
     if('serviceWorker' in navigator){
       const swCode = `
-        const CACHE = 'mci-v2026-10-29-homev2';
+        const CACHE = 'mci-v2026-10-29-drivelist';
         self.addEventListener('install', (e)=>{
           self.skipWaiting();
           e.waitUntil(caches.open(CACHE).then(c=>c.addAll(['./']).catch(()=>{})));
@@ -13672,32 +13677,139 @@ async function driveFetch(path, options={}){
   return res;
 }
 
+function driveDeviceSlug(){
+  let n = '';
+  try{ n = (typeof getDeviceName === 'function' ? getDeviceName() : '') || ''; }catch(e){}
+  if(!n){ try{ n = (localStorage.getItem('lc-device-name')||'').trim(); }catch(e){} }
+  if(!n) n = 'aparelho';
+  return String(n).normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40) || 'aparelho';
+}
+function driveBackupFileNameForThisDevice(){
+  return 'Meu-Caixa-Inteligente-'+driveDeviceSlug()+'.json';
+}
+async function listDriveBackupFiles(){
+  await requestDriveAccess();
+  const queries = [
+    "name contains 'Meu-Caixa-Inteligente' and trashed=false",
+    "name contains 'Livro-Caixa' and trashed=false",
+    "name contains 'livro-caixa' and trashed=false"
+  ];
+  const byId = {};
+  for(const qraw of queries){
+    const q = encodeURIComponent(qraw);
+    const res = await driveFetch('/files?q='+q+'&spaces=drive&fields=files(id,name,modifiedTime,size)&pageSize=30&orderBy=modifiedTime desc');
+    if(!res.ok) continue;
+    const data = await res.json();
+    (data.files||[]).forEach(f=>{ if(f && f.id) byId[f.id] = f; });
+  }
+  const sid = loadDriveFileId();
+  if(sid && !byId[sid]){
+    try{
+      const check = await driveFetch('/files/'+encodeURIComponent(sid)+'?fields=id,name,modifiedTime,size');
+      if(check.ok){ const f = await check.json(); if(f && f.id) byId[f.id] = f; }
+    }catch(e){}
+  }
+  return Object.values(byId).sort((a,b)=> String(b.modifiedTime||'').localeCompare(String(a.modifiedTime||'')));
+}
+function renderDriveFilesList(files){
+  const el = document.getElementById('drive-files-list');
+  if(!el) return;
+  if(!files || !files.length){
+    el.style.display = 'block';
+    el.innerHTML = '<div style="font-size:12.5px;color:var(--ink-faint);padding:8px 0;">Nenhum backup do app encontrado no Drive. Use “Salvar no Drive” neste aparelho.</div>';
+    return;
+  }
+  const thisName = driveBackupFileNameForThisDevice();
+  el.style.display = 'block';
+  el.innerHTML = '<div style="font-size:12.5px;font-weight:600;color:var(--ink);margin:0 0 8px;">Backups no Google Drive — escolha qual restaurar</div>' +
+    files.map(f=>{
+      const when = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString('pt-BR') : '—';
+      const isThis = f.name === thisName || f.name === DRIVE_FILE_NAME;
+      const tag = isThis ? ' <span style="font-size:10px;color:var(--accent);">· este aparelho</span>' : '';
+      return '<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);">'+
+        '<div style="min-width:0;flex:1;">'+
+          '<div style="font-size:13px;color:var(--ink);font-weight:600;word-break:break-all;">'+escapeHTML(f.name||'backup')+tag+'</div>'+
+          '<div style="font-size:11.5px;color:var(--ink-faint);margin-top:2px;">Atualizado '+escapeHTML(when)+'</div>'+
+        '</div>'+
+        '<button type="button" class="btn secondary" style="padding:7px 12px;font-size:12.5px;" data-drive-restore-id="'+escapeAttr(f.id)+'" data-drive-restore-name="'+escapeAttr(f.name||'')+'">Restaurar</button>'+
+      '</div>';
+    }).join('');
+  el.querySelectorAll('[data-drive-restore-id]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      restoreDriveBackupById(btn.getAttribute('data-drive-restore-id'), btn.getAttribute('data-drive-restore-name')||'backup');
+    });
+  });
+}
+async function driveListBackupsClick(){
+  try{
+    if(typeof requirePro === 'function' && !requirePro('Backup no Google Drive')) return;
+    setDriveStatus('Buscando backups no Drive…');
+    const files = await listDriveBackupFiles();
+    renderDriveFilesList(files);
+    setDriveStatus(files.length ? (files.length+' backup(s) encontrado(s)') : 'Nenhum backup no Drive');
+  }catch(e){
+    console.error(e);
+    setDriveStatus('Falha: '+(e.message||e));
+    alert('Erro ao listar backups: '+(e.message||e));
+  }
+}
+async function restoreDriveBackupById(fileId, fileName){
+  try{
+    if(typeof requirePro === 'function' && !requirePro('Backup no Google Drive')) return;
+    const label = fileName || 'backup';
+    const go = async ()=>{
+      setDriveStatus('Baixando '+label+'…');
+      await requestDriveAccess();
+      const res = await driveFetch('/files/'+encodeURIComponent(fileId)+'?alt=media');
+      if(!res.ok) throw new Error('Falha ao baixar o arquivo.');
+      const parsed = await res.json();
+      if(!parsed || !Array.isArray(parsed.transactions)) throw new Error('Arquivo do Drive não parece um backup válido.');
+      if(typeof applyImportedBackup === 'function') applyImportedBackup(parsed);
+      else {
+        normalizeLoadedState(parsed);
+        saveState();
+        try{ fillCategorySelects(); }catch(e){}
+        try{ fillAccountSuggestions(); }catch(e){}
+        try{ renderDashboard(); }catch(e){}
+        try{ renderTransactions(true); }catch(e){}
+      }
+      saveDriveFileId(fileId);
+      setDriveStatus('Restaurado · '+label+' · '+parsed.transactions.length+' lanç. · '+new Date().toLocaleString('pt-BR'));
+      showToast('Backup restaurado: '+label);
+    };
+    const msg = 'Substituir os dados atuais deste perfil pelo backup\n“'+label+'”?\n\nEsta ação não se desfaz.';
+    if(typeof askConfirm === 'function') askConfirm('Restaurar do Drive', msg, go);
+    else if(confirm(msg)) await go();
+  }catch(e){
+    console.error(e);
+    setDriveStatus('Falha: '+(e.message||e));
+    alert('Erro ao restaurar: '+(e.message||e));
+  }
+}
+/** Arquivo deste aparelho (não lista/sobrescreve outros dispositivos). */
 async function findDriveBackupFile(){
+  const deviceName = driveBackupFileNameForThisDevice();
   let id = loadDriveFileId();
   if(id){
     const check = await driveFetch('/files/'+encodeURIComponent(id)+'?fields=id,name,modifiedTime');
     if(check.ok){
-      const f = await check.json();
-      // renomeia se estiver Untitled ou nome antigo
-      if(f && f.name && f.name !== DRIVE_FILE_NAME){
-        try{ await renameDriveFile(f.id, DRIVE_FILE_NAME); f.name = DRIVE_FILE_NAME; }catch(e){ console.warn(e); }
-      }
-      return f;
+      return await check.json();
     }
     saveDriveFileId('');
   }
-  const names = (typeof DRIVE_FILE_NAME_ALIASES !== 'undefined' ? DRIVE_FILE_NAME_ALIASES : [DRIVE_FILE_NAME]);
+  const names = [deviceName, DRIVE_FILE_NAME].concat(typeof DRIVE_FILE_NAME_ALIASES !== 'undefined' ? DRIVE_FILE_NAME_ALIASES : []);
+  const seen = {};
   for(const name of names){
-    const q = encodeURIComponent("name='"+name.replace(/'/g,"\\'")+"' and trashed=false");
+    if(!name || seen[name]) continue;
+    seen[name] = 1;
+    const q = encodeURIComponent("name='"+String(name).replace(/'/g,"\\'")+"' and trashed=false");
     const res = await driveFetch('/files?q='+q+'&spaces=drive&fields=files(id,name,modifiedTime)&pageSize=5&orderBy=modifiedTime desc');
     if(!res.ok) continue;
     const data = await res.json();
     const file = (data.files && data.files[0]) || null;
     if(file){
-      saveDriveFileId(file.id);
-      if(file.name !== DRIVE_FILE_NAME){
-        try{ await renameDriveFile(file.id, DRIVE_FILE_NAME); file.name = DRIVE_FILE_NAME; }catch(e){ console.warn(e); }
-      }
+      if(file.name === deviceName || file.name === DRIVE_FILE_NAME) saveDriveFileId(file.id);
       return file;
     }
   }
@@ -13714,7 +13826,6 @@ async function renameDriveFile(fileId, newName){
 }
 
 function buildBackupPayload(){
-  // reutiliza o mesmo formato rico do Gist/export JSON
   try{
     if(typeof buildBackupObject === 'function'){
       const full = buildBackupObject();
@@ -13727,6 +13838,7 @@ function buildBackupPayload(){
     app: 'livro-caixa',
     version: 2,
     exportedAt: new Date().toISOString(),
+    deviceName: (typeof getDeviceName === 'function' ? getDeviceName() : '') || 'aparelho',
     transactions: state.transactions,
     categories: state.categories,
     categoryRules: state.categoryRules,
@@ -13738,7 +13850,7 @@ function buildBackupPayload(){
     goals: state.goals,
     debts: state.debts,
     importPrefs: state.importPrefs,
-    transactionTypes: state.transactionTypes,
+    transactionTypes: state.transactionTypes
   };
 }
 
@@ -13746,10 +13858,10 @@ async function uploadBackupToDrive(){
   setDriveStatus('Enviando backup…');
   await requestDriveAccess();
   const payload = JSON.stringify(buildBackupPayload(), null, 2);
+  const targetName = driveBackupFileNameForThisDevice();
   let file = await findDriveBackupFile();
 
   if(file && file.id){
-    // atualiza conteúdo
     const res = await fetch('https://www.googleapis.com/upload/drive/v3/files/'+encodeURIComponent(file.id)+'?uploadType=media', {
       method: 'PATCH',
       headers: {
@@ -13759,26 +13871,26 @@ async function uploadBackupToDrive(){
       body: payload
     });
     if(!res.ok) throw new Error('Falha ao atualizar arquivo no Drive.');
-    // garante o nome do app
-    try{ await renameDriveFile(file.id, DRIVE_FILE_NAME); }catch(e){ console.warn(e); }
-    const meta = await res.json();
+    try{
+      if(file.name !== targetName) await renameDriveFile(file.id, targetName);
+    }catch(e){ console.warn(e); }
+    const meta = await res.json().catch(()=>({}));
     saveDriveFileId(meta.id || file.id);
-    setDriveStatus('Backup atualizado · '+DRIVE_FILE_NAME+' · '+new Date().toLocaleString('pt-BR'));
+    setDriveStatus('Backup atualizado · '+targetName+' · '+new Date().toLocaleString('pt-BR'));
     return meta;
   }
 
-  // criar novo com nome explícito (multipart/related correto — evita "Untitled")
   const boundary = '-------mci'+Date.now();
-  const meta = { name: DRIVE_FILE_NAME, mimeType: 'application/json' };
+  const metaObj = { name: targetName, mimeType: 'application/json' };
   const body =
     '--'+boundary+'\r\n'+
     'Content-Type: application/json; charset=UTF-8\r\n\r\n'+
-    JSON.stringify(meta)+'\r\n'+
+    JSON.stringify(metaObj)+'\r\n'+
     '--'+boundary+'\r\n'+
     'Content-Type: application/json\r\n\r\n'+
     payload+'\r\n'+
     '--'+boundary+'--';
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,modifiedTime', {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer '+driveAccessToken,
@@ -13792,36 +13904,21 @@ async function uploadBackupToDrive(){
   }
   const created = await res.json();
   saveDriveFileId(created.id);
-  // reforça o nome se a API devolver Untitled
   if(!created.name || /untitled|sem título/i.test(created.name)){
-    try{ await renameDriveFile(created.id, DRIVE_FILE_NAME); created.name = DRIVE_FILE_NAME; }catch(e){ console.warn(e); }
+    try{ await renameDriveFile(created.id, targetName); created.name = targetName; }catch(e){ console.warn(e); }
   }
-  setDriveStatus('Backup criado · '+DRIVE_FILE_NAME+' · '+new Date().toLocaleString('pt-BR'));
+  setDriveStatus('Backup criado · '+targetName+' · '+new Date().toLocaleString('pt-BR'));
   return created;
 }
 
 async function downloadBackupFromDrive(){
-  setDriveStatus('Baixando backup…');
-  await requestDriveAccess();
-  const file = await findDriveBackupFile();
-  if(!file || !file.id) throw new Error('Nenhum backup Meu-Caixa-Inteligente-backup.json encontrado no Drive.');
-  const res = await driveFetch('/files/'+encodeURIComponent(file.id)+'?alt=media');
-  if(!res.ok) throw new Error('Falha ao baixar o arquivo.');
-  const parsed = await res.json();
-  if(!parsed || !Array.isArray(parsed.transactions)) throw new Error('Arquivo do Drive não parece um backup válido.');
-  if(typeof applyImportedBackup === 'function') applyImportedBackup(parsed);
-  else {
-    normalizeLoadedState(parsed);
-    saveState();
-    try{ fillCategorySelects(); }catch(e){}
-    try{ fillAccountSuggestions(); }catch(e){}
-    try{ renderDashboard(); }catch(e){}
-    try{ renderTransactions(true); }catch(e){}
-  }
-  setDriveStatus('Restaurado do Drive · '+ (file.modifiedTime ? new Date(file.modifiedTime).toLocaleString('pt-BR') : 'ok'));
+  // agora abre a lista para o usuário escolher (vários aparelhos)
+  setDriveStatus('Buscando backups no Drive…');
+  const files = await listDriveBackupFiles();
+  renderDriveFilesList(files);
+  if(!files.length) throw new Error('Nenhum backup do app encontrado no Google Drive.');
+  setDriveStatus(files.length+' backup(s) — escolha qual restaurar abaixo');
 }
-
-
 
 function dismissDriveAutoBanner(){
   try{ localStorage.setItem(DRIVE_BANNER_DISMISS_KEY, '1'); }catch(e){}
@@ -14013,21 +14110,16 @@ async function driveUploadClick(){
 function driveDownloadClick(){
   try{
     if(typeof requirePro === 'function' && !requirePro('Backup no Google Drive')) return;
-    const go = async ()=>{
+    (async ()=>{
       try{
         await downloadBackupFromDrive();
-        showToast('Backup restaurado do Drive.');
+        showToast('Escolha o backup na lista abaixo.');
       }catch(e){
         console.error(e);
         setDriveStatus('Falha: '+(e.message||e));
-        alert('Erro ao restaurar do Drive: '+(e.message||e));
+        alert('Erro ao buscar backups: '+(e.message||e));
       }
-    };
-    if(typeof askConfirm === 'function'){
-      askConfirm('Restaurar do Drive', 'Isso substitui os dados atuais deste perfil pelos do arquivo no Google Drive. Continuar?', go);
-    } else if(confirm('Restaurar do Drive e substituir dados atuais?')){
-      go();
-    }
+    })();
   }catch(e){
     console.error(e);
     alert('Erro Drive: '+(e.message||e));
@@ -14036,6 +14128,8 @@ function driveDownloadClick(){
 window.driveConnectClick = driveConnectClick;
 window.driveUploadClick = driveUploadClick;
 window.driveDownloadClick = driveDownloadClick;
+window.driveListBackupsClick = driveListBackupsClick;
+window.restoreDriveBackupById = restoreDriveBackupById;
 window.driveSyncNowClick = driveSyncNowClick;
 window.enableDriveAutoClick = enableDriveAutoClick;
 window.dismissDriveAutoBanner = dismissDriveAutoBanner;
